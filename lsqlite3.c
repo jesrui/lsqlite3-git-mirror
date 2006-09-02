@@ -1,5 +1,6 @@
 /************************************************************************
 * Author    : Tiago Dionizio (tngd@mega.ist.utl.pt)                     *
+* Author    : Doug Currie (doug.currie@alum.mit.edu)                    *
 * Library   : lsqlite3 - a SQLite 3 database binding for Lua 5          *
 *                                                                       *
 * Permission is hereby granted, free of charge, to any person obtaining *
@@ -22,107 +23,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                *
 ************************************************************************/
 
-/************************************************************************
-$Id: lsqlite3.c,v 1.3 2004/09/05 17:50:32 tngd Exp $
-
-To consider:
-------------
-
-EXPERIMENTAL APIs
-
-* sqlite3_progress_handler (implemented)
-* sqlite3_commit_hook
-
-TODO?
-
-* sqlite3_create_collation
-
-Changes:
-04-09-2004
-----------
-    * changed second return value of db:compile to be the rest of the
-    sql statement that was not processed instead of the number of
-    characters of sql not processed (situation in case of success).
-    * progress callback register function parameter order changed.
-    number of opcodes is given before the callback now.
-
-29-08-2004 e
-------------
-    * added version() (now supported in sqlite 3.0.5)
-    * added db:errmsg db:errcode db:total_changes
-    * rename vm:get_column to vm:get_value
-    * merge in Tiago's v1.11 change in dbvm_tostring
-
-23-06-2004 e
-------------
-    * heavily revised for SQLite3 C API
-    * row values now returned as native type (not always text)
-    * added db:nrows (named rows)
-    * added vm:bind_blob
-    * added vm:get_column
-    * removed encode_binary decode_binary (no longer needed or supported)
-    * removed version encoding error_string (unsupported in v 3.0.1 -- soon?)
-
-09-04-2004
-----------
-    * renamed db:rows to db:urows
-    * renamed db:prows to db:rows
-
-    * added vm:get_unames()
-    * added vm:get_utypes()
-    * added vm:get_uvalues()
-
-08-04-2004
-----------
-    * changed db:encoding() and db:version() to use sqlite_libencoding() and
-    sqlite_libversion()
-
-    * added vm:columns()
-    * added vm:get_named_types()
-    * added vm:get_named_values()
-
-    * added db:prows - like db:rows but returns a table with the column values
-    instead of returning multiple columns seperatly on each iteration
-
-    * added compatibility functions idata,iname,itype,data,type
-
-    * added luaopen_sqlite_module. allow the library to be loaded without
-    setting a global variable. does the same as luaopen_sqlite, but does not
-    set the global name "sqlite".
-
-    * vm:bind now also returns an error string in case of error
-
-31-03-2004 - 01-04-2004
------------------------
-    * changed most of the internals. now using references (luaL_ref) in
-    most of the places
-
-    * make the virtual machine interface seperate from the database
-    handle. db:compile now returns a vm handle
-
-    * added db:rows [for ... in db:rows(...) do ... end]
-
-    * added db:close_vm
-
-    * added sqlite.encode_binary and sqlite.decode_binary
-
-    * attempt to do a strict checking on the return type of the user
-    defined functions returned values
-
-18-01-2004
-----------
-    * add check on sql function callback to ensure there is enough stack
-    space to pass column values as parameters
-
-03-12-2003
-----------
-    * callback functions now have to return boolean values to abort or
-    continue operation instead of a zero or non-zero value
-
-06-12-2003
-----------
-    * make version member of sqlite table a function instead of a string
-************************************************************************/
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -228,6 +128,7 @@ struct sdb_vm {
     char temp;              /* temporary vm used in db:rows */
 };
 
+/* called with sql text on the lua stack */
 static sdb_vm *newvm(lua_State *L, sdb *db) {
     sdb_vm *svm = (sdb_vm*)lua_newuserdata(L, sizeof(sdb_vm));
 
@@ -240,11 +141,11 @@ static sdb_vm *newvm(lua_State *L, sdb *db) {
     svm->vm = NULL;
     svm->temp = 0;
 
-    /* add an entry on the database table */
+    /* add an entry on the database table: svm -> sql text */
     lua_pushlightuserdata(L, db);
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushlightuserdata(L, svm);
-    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -4); /* the sql text */
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
@@ -270,6 +171,36 @@ static int cleanupvm(lua_State *L, sdb_vm *svm) {
     return 1;
 }
 
+static int stepvm(lua_State *L, sdb_vm *svm) {
+    int result;
+    int loop_limit = 3;
+    while ( loop_limit-- ) {
+        result = sqlite3_step(svm->vm);
+        if ( result==SQLITE_ERROR ) {
+          result = sqlite3_reset (svm->vm);
+        }
+        if ( result==SQLITE_SCHEMA ) {
+            sqlite3_stmt *vn;
+            const char *sql;
+            /* recover sql text */
+            lua_pushlightuserdata(L, svm->db);
+            lua_rawget(L, LUA_REGISTRYINDEX);
+            lua_pushlightuserdata(L, svm);
+            lua_rawget(L, -2); /* sql text */
+            sql = luaL_checkstring(L, -1);
+            /* re-prepare */
+            result = sqlite3_prepare(svm->db->db, sql, -1, &vn, NULL);
+            if (result != SQLITE_OK) break;
+            sqlite3_transfer_bindings(svm->vm, vn);
+            sqlite3_finalize(svm->vm);
+            svm->vm = vn;
+            lua_pop(L,2);
+        } else {
+          break;
+        }
+    }
+    return result;
+}
 
 static sdb_vm *lsqlite_getvm(lua_State *L, int index) {
     sdb_vm *svm = (sdb_vm*)luaL_checkudata(L, index, sqlite_vm_meta);
@@ -311,7 +242,7 @@ static int dbvm_step(lua_State *L) {
     int result;
     sdb_vm *svm = lsqlite_checkvm(L, 1);
 
-    result = sqlite3_step(svm->vm);
+    result = stepvm(L, svm);
     svm->has_values = result == SQLITE_ROW ? 1 : 0;
     svm->columns = sqlite3_data_count(svm->vm);
 
@@ -671,7 +602,7 @@ static int cleanupdb(lua_State *L, sdb *db) {
     top = lua_gettop(L);
     lua_pushnil(L);
     while (lua_next(L, -2)) {
-        sdb_vm *svm = lua_touserdata(L, -1);
+        sdb_vm *svm = lua_touserdata(L, -2); /* key: vm; val: sql text */
         cleanupvm(L, svm);
 
         lua_settop(L, top);
@@ -1445,7 +1376,9 @@ static int db_prepare(lua_State *L) {
     const char *sql = luaL_checkstring(L, 2);
     int sql_len = lua_strlen(L, 2);
     const char *sqltail;
-    sdb_vm *svm = newvm(L, db);
+    sdb_vm *svm;
+    lua_settop(L,2); /* sql is on top of stack for call to newvm */
+    svm = newvm(L, db);
 
     if (sqlite3_prepare(db->db, sql, sql_len, &svm->vm, &sqltail) != SQLITE_OK) {
         cleanupvm(L, svm);
@@ -1463,11 +1396,12 @@ static int db_prepare(lua_State *L) {
 static int db_do_next_row(lua_State *L, int packed) {
     int result;
     sdb_vm *svm = lsqlite_checkvm(L, 1);
-    sqlite3_stmt *vm = svm->vm;
+    sqlite3_stmt *vm;
     int columns;
     int i;
 
-    result = sqlite3_step(vm);
+    result = stepvm(L, svm);
+    vm = svm->vm; /* stepvm may change svm->vm if re-prepare is needed */
     svm->has_values = result == SQLITE_ROW ? 1 : 0;
     svm->columns = columns = sqlite3_data_count(vm);
 
@@ -1550,7 +1484,9 @@ static int dbvm_urows(lua_State *L) {
 static int db_do_rows(lua_State *L, int(*f)(lua_State *)) {
     sdb *db = lsqlite_checkdb(L, 1);
     const char *sql = luaL_checkstring(L, 2);
-    sdb_vm *svm = newvm(L, db);
+    sdb_vm *svm;
+    lua_settop(L,2); /* sql is on top of stack for call to newvm */
+    svm = newvm(L, db);
     svm->temp = 1;
 
     if (sqlite3_prepare(db->db, sql, -1, &svm->vm, NULL) != SQLITE_OK) {
@@ -1607,7 +1543,7 @@ static int db_close_vm(lua_State *L) {
     /* close all used handles */
     lua_pushnil(L);
     while (lua_next(L, -2)) {
-        sdb_vm *svm = lua_touserdata(L, -1);
+        sdb_vm *svm = lua_touserdata(L, -2); /* key: vm; val: sql text */
 
         if ((!temp || svm->temp) && svm->vm)
         {
