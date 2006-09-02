@@ -1,0 +1,8 @@
+
+Lua SQLite 3 allows you to manipulate SQLite 3 databases
+directly from lua using Lua 5.
+
+To use this library you need SQLite 3 library.
+You can get it from http://www.sqlite.org/
+
+Lua 5 is available from http://www.lua.org/
