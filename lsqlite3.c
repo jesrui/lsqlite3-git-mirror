@@ -1438,7 +1438,7 @@ static int db_do_next_row(lua_State *L, int packed) {
         cleanupvm(L, svm);
     }
     else if (result == SQLITE_DONE) {
-        result = SQLITE_OK;
+        result = sqlite3_reset(vm);
     }
 
     if (result != SQLITE_OK) {
