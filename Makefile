@@ -1,52 +1,99 @@
 # makefile for lsqlite3 library for Lua
 
-# dist location
-DISTDIR=$(HOME)/dist
-TMP=/tmp
+ifneq "$(shell pkg-config --version)" ""
+  # automagic setup (OS X fink, Linux apt-get, ..)
+  #
+  LUAINC= $(shell pkg-config --cflags lua)
+  LUALIB= $(shell pkg-config --libs lua)
+  LUAEXE= lua
+  # Now, we actually want to _not_ push in stuff to the distro Lua CMOD directory,
+  # way better to play within /usr/local/lib/lua/5.1/
+  #LUACMOD= $(shell pkg-config --variable=INSTALL_CMOD lua)
+  LUACMOD= /usr/local/lib/lua/5.1/
+  #
+  SQLITE3INC= $(shell pkg-config --cflags sqlite3)
+  SQLITE3LIB= $(shell pkg-config --libs sqlite3)
+else
+  # manual setup (change these to reflect your Lua installation)
+  #
+  BASE= /usr/local
+  LUAINC= -I$(BASE)/include
+  LUAEXE= $(BASE)/bin/lua.exe
+#  LUALIB= -L$(BASE)/lib -llua51
+#  LUACMOD= $(BASE)/lib/lua/5.1/
+#  Windows' LUA_CDIR and LUALIB are both the same as the Lua executable's directory...
+  LUALIB= -L$(BASE)/bin -llua51
+  LUACMOD= $(BASE)/bin
+  #
+  SQLITE3INC= -I$(BASE)/include
+  SQLITE3LIB= -L$(BASE)/bin -lsqlite3
+endif
 
-# change these to reflect your Lua installation
-LUA= /usr/local
-LUAINC= $(LUA)/include
-LUALIB= $(LUA)/lib
-LUABIN= $(LUA)/bin
-LUALUA= $(LUA)/lua
+TMP=./tmp
+DISTDIR=./archive
 
-SQLITE= . #../sqlite
+# OS detection
+#
+SHFLAGS=-shared
+UNAME= $(shell uname)
+ifeq "$(UNAME)" "Linux"
+  _SO=so
+  SHFLAGS= -fPIC
+endif
+ifneq "" "$(findstring BSD,$(UNAME))"
+  _SO=so
+endif
+ifeq "$(UNAME)" "Darwin"
+  _SO=bundle
+  SHFLAGS= -bundle
+endif
+ifneq "" "$(findstring msys,$(OSTYPE))"		# 'msys'
+  _SO=dll
+endif
 
-# no need to change anything below here
+ifndef _SO
+  $(error $(UNAME))
+  $(error Unknown OS)
+endif
+
+# no need to change anything below here - HAH!
 CFLAGS= $(INCS) $(DEFS) $(WARN) -O2 $(SHFLAGS)
-#SHFLAGS= -fPIC
-SHFLAGS=
 WARN= -Wall #-ansi -pedantic -Wall
-INCS= -I$(LUAINC) -I$(SQLITE)
-#LIBS= -L$(LUALIB) -L$(SQLITE) -lsqlite3 -llualib5 -llua5
-LIBS= -L$(LUALIB) -L$(SQLITE) $(LUABIN)/sqlite3.dll -llua51
+INCS= $(LUAINC) $(SQLITE3INC)
+LIBS= $(LUALIB) $(SQLITE3LIB)
 
 MYNAME= sqlite3
 MYLIB= l$(MYNAME)
-VER=0.1-devel
+
+VER=$(shell svnversion -c . | sed 's/.*://')
 TARFILE = $(DISTDIR)/$(MYLIB)-$(VER).tar.gz
 
 OBJS= $(MYLIB).o
-#T= $(MYLIB).so
-T= $(MYLIB).dll
+T= $(MYLIB).$(_SO)
 
 all: $T
 
 test: $T
-	$(LUABIN)/lua.exe test.lua
+	$(LUAEXE) test.lua
+	$(LUAEXE) tests-sqlite3.lua
 
 $T:	$(OBJS)
-	$(CC) $(SHFLAGS) -o $@ -shared $(OBJS) $(LIBS)
+	$(CC) $(SHFLAGS) -o $@ $(OBJS) $(LIBS)
+
+install:
+	cp $T $(LUACMOD)
 
 clean:
-	rm -f $(OBJS) $T core core.* a.out
+	rm -f $(OBJS) $T core core.* a.out test.db
 
 dist:
-	@echo 'Exporting...'
-	@cvs export -r HEAD -d $(TMP)/$(MYLIB)-$(VER) $(MYLIB)
-	@echo 'Compressing...'
-	@tar -zcf $(TARFILE) -C $(TMP) $(MYLIB)-$(VER)
-	@rm -fr $(TMP)/$(MYLIB)-$(VER)
-	@lsum $(TARFILE) $(DISTDIR)/md5sums.txt
-	@echo 'Done.'
+	echo 'Exporting...'
+	mkdir -p $(TMP)
+	mkdir -p $(DISTDIR)
+	svn export -r HEAD . $(TMP)/$(MYLIB)-$(VER)
+	echo 'Compressing...'
+	tar -zcf $(TARFILE) -C $(TMP) $(MYLIB)-$(VER)
+	rm -fr $(TMP)/$(MYLIB)-$(VER)
+	echo 'Done.'
+
+.PHONY: all test clean dist install
