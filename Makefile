@@ -27,6 +27,8 @@ else
   #
   SQLITE3INC= -I$(BASE)/include
   SQLITE3LIB= -L$(BASE)/bin -lsqlite3
+  #
+  POD2HTML= perl -x -S doc/pod2html.pl
 endif
 
 TMP=./tmp
@@ -86,11 +88,16 @@ install:
 clean:
 	rm -f $(OBJS) $T core core.* a.out test.db
 
-dist:
+html:
+	$(POD2HTML) --title="LuaSQLite 3" --infile=doc/lsqlite3.pod --outfile=doc/lsqlite3.html
+
+dist:	html
 	echo 'Exporting...'
 	mkdir -p $(TMP)
 	mkdir -p $(DISTDIR)
 	svn export -r HEAD . $(TMP)/$(MYLIB)-$(VER)
+	mkdir -p $(TMP)/$(MYLIB)-$(VER)/doc
+	cp -p doc/lsqlite3.html $(TMP)/$(MYLIB)-$(VER)/doc
 	echo 'Compressing...'
 	tar -zcf $(TARFILE) -C $(TMP) $(MYLIB)-$(VER)
 	rm -fr $(TMP)/$(MYLIB)-$(VER)

@@ -234,8 +234,8 @@ lunit.wrap("Column Info Test", function()
   assert_equal("INTEGER", types[1] )
   assert_equal("TEXT", types[2] )
   
-  assert_number( stmt:finalize() )
-  assert_number( db:close() )
+  assert_equal( sqlite3.OK, stmt:finalize() )
+  assert_equal( sqlite3.OK, db:close() )
 end)
 
 
@@ -248,14 +248,14 @@ st = lunit.TestCase("Statement Tests")
 
 function st:setup()
   self.db = assert( sqlite3.open_memory() )
-  assert_number( self.db:exec("CREATE TABLE test (id, name)") )
-  assert_number( self.db:exec("INSERT INTO test VALUES (1, 'Hello World')") )
-  assert_number( self.db:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
-  assert_number( self.db:exec("INSERT INTO test VALUES (3, 'Hello sqlite3')") )
+  assert_equal( sqlite3.OK, self.db:exec("CREATE TABLE test (id, name)") )
+  assert_equal( sqlite3.OK, self.db:exec("INSERT INTO test VALUES (1, 'Hello World')") )
+  assert_equal( sqlite3.OK, self.db:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
+  assert_equal( sqlite3.OK, self.db:exec("INSERT INTO test VALUES (3, 'Hello sqlite3')") )
 end
 
 function st:teardown()
-  assert_number( self.db:close() )
+  assert_equal( sqlite3.OK, self.db:close() )
 end
 
 function st:check_content(expected)
@@ -537,6 +537,51 @@ function bug:test_nils()   -- appeared in lua-5.1 (holes in arrays)
   do assert_table( row ) 
      check(row[1], row[2], row[3], row[4], row[5])
   end
+end
+
+----------------------------
+-- Test for collation fun --
+----------------------------
+
+colla = lunit.TestCase("Collation Tests")
+
+function colla:setup()
+    local function collate(s1,s2)
+        -- if p then print("collation callback: ",s1,s2) end
+        s1=s1:lower()
+        s2=s2:lower()
+        if s1==s2 then return 0
+        elseif s1<s2 then return -1
+        else return 1 end
+    end
+    self.db = assert( sqlite3.open_memory() )
+    assert_nil(self.db:create_collation('CINSENS',collate))
+    self.db:exec[[
+      CREATE TABLE test(id INTEGER PRIMARY KEY,content COLLATE CINSENS);
+      INSERT INTO test VALUES(NULL,'hello world');
+      INSERT INTO test VALUES(NULL,'Buenos dias');
+      INSERT INTO test VALUES(NULL,'HELLO WORLD');
+      INSERT INTO test VALUES(NULL,'Guten Tag');
+      INSERT INTO test VALUES(NULL,'HeLlO WoRlD');
+      INSERT INTO test VALUES(NULL,'Bye for now');
+    ]]
+end
+
+function colla:teardown()
+  assert_number( self.db:close() )
+end
+
+function colla:test()
+    --for row in db:nrows('SELECT * FROM test') do
+    --  print(row.id,row.content)
+    --end
+    local n = 0
+    for row in self.db:nrows('SELECT * FROM test WHERE content="hElLo wOrLd"') do
+      -- print(row.id,row.content)
+      assert_equal (row.content:lower(), "hello world")
+      n = n + 1
+    end
+    assert_equal (n, 3)
 end
 
 lunit.run()

@@ -1,6 +1,9 @@
 /************************************************************************
-* Author    : Tiago Dionizio (tngd@mega.ist.utl.pt)                     *
-* Author    : Doug Currie (doug.currie@alum.mit.edu)                    *
+* lsqlite3                                                              *
+* Copyright (C) 2002-2007 Tiago Dionizio, Doug Currie                   *
+* All rights reserved.                                                  *
+* Author    : Tiago Dionizio <tiago.dionizio@ist.utl.pt>                *
+* Author    : Doug Currie <doug.currie@alum.mit.edu>                    *
 * Library   : lsqlite3 - a SQLite 3 database binding for Lua 5          *
 *                                                                       *
 * Permission is hereby granted, free of charge, to any person obtaining *
@@ -522,10 +525,10 @@ static int dbvm_bind_values(lua_State *L) {
 static int dbvm_bind_names(lua_State *L) {
     sdb_vm *svm = lsqlite_checkvm(L, 1);
     sqlite3_stmt *vm = svm->vm;
-    luaL_checktype(L, 2, LUA_TTABLE);
     int count = sqlite3_bind_parameter_count(vm);
     const char *name;
     int result, n;
+    luaL_checktype(L, 2, LUA_TTABLE);
 
     for (n = 1; n <= count; ++n) {
         name = sqlite3_bind_parameter_name(vm, n);
@@ -1088,6 +1091,59 @@ static int db_create_function(lua_State *L) {
 
 static int db_create_aggregate(lua_State *L) {
     return db_register_function(L, 1);
+}
+
+/* create_collation; contributed by Thomas Lauer
+*/
+
+typedef struct {
+    lua_State *L;
+    int ref;
+} scc;
+
+static int collwrapper(scc *co,int l1,const void *p1,
+                        int l2,const void *p2) {
+    int res=0;
+    lua_State *L=co->L;
+    lua_rawgeti(L,LUA_REGISTRYINDEX,co->ref);
+    lua_pushlstring(L,p1,l1);
+    lua_pushlstring(L,p2,l2);
+    if (lua_pcall(L,2,1,0)==0) res=(int)lua_tonumber(L,-1);
+    lua_pop(L,1);
+    return res;
+}
+
+static void collfree(scc *co) {
+    if (co) {
+        luaL_unref(co->L,LUA_REGISTRYINDEX,co->ref);
+        free(co);
+    }
+}
+
+static int db_create_collation(lua_State *L) {
+    sdb *db=lsqlite_checkdb(L,1);
+    const char *collname=luaL_checkstring(L,2);
+    scc *co=NULL;
+    int (*collfunc)(scc *,int,const void *,int,const void *)=NULL;
+    lua_settop(L,3); /* default args to nil, and exclude extras */
+    if (lua_isfunction(L,3)) collfunc=collwrapper;
+    else if (!lua_isnil(L,3))
+        luaL_error(L,"create_collation: function or nil expected");
+    if (collfunc != NULL) {
+        co=(scc *)malloc(sizeof(scc)); // userdata is a no-no as it
+                                         // will be garbage-collected
+        if (co) {
+            co->L=L;
+            /* lua_settop(L,3) above means we don't need: lua_pushvalue(L,3); */
+            co->ref=luaL_ref(L,LUA_REGISTRYINDEX);
+        }
+        else luaL_error(L,"create_collation: could not allocate callback");
+    }
+    sqlite3_create_collation_v2(db->db, collname, SQLITE_UTF8,
+        (void *)co,
+        (int(*)(void*,int,const void*,int,const void*))collfunc,
+        (void(*)(void*))collfree);
+    return 0;
 }
 
 /*
@@ -1685,6 +1741,7 @@ static const luaL_reg dblib[] = {
 
     {"create_function",     db_create_function      },
     {"create_aggregate",    db_create_aggregate     },
+    {"create_collation",    db_create_collation     },
 
     {"trace",               db_trace                },
     {"progress_handler",    db_progress_handler     },

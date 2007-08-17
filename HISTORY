@@ -1,3 +1,22 @@
+2007-August-15 e
+
+Version "0.6-devel"
+
+Since the "0.5-devel" release of this Lua library...
+
+Tested with SQLite 3.4.2
+
+Added some documentation.
+
+Thanks to Thomas Lauer...
+
+Moved line 525 ("luaL_checktype(L, 2, LUA_TTABLE);")
+below the declarations to eliminate non-gcc compiler errors.
+
+Added create-collation, and associated test case.
+
+-=-
+
 2006-October-02 e
 
 Since the "0.1-devel" release of this Lua library...
