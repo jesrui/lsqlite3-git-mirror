@@ -1,3 +1,33 @@
+2010-February-14
+
+Version "0.7-devel"
+
+Since the "0.6-devel" release of this Lua library...
+
+Made db_exec_callback thread safe.
+Thanks to Grant Robinson.
+
+Bug fix in dbvm_bind_index error message.
+Thanks to Dirk Feytons.
+
+Added a few casts and changed a few comments to ANSI C style.
+Thanks to Corey Stup.
+
+Note that Thomas Lauer has a patch referenced on LuaForge
+to make collations thread safe(r). This issue is still 
+under investigation: the patch has wide ranging affect
+and to me it appears unsafe wrt GC. The whole issue of 
+thread references in callbacks deserves thorough review.
+A new design that places referenced values in the upvalues
+of the callback function (rather than in the registry of 
+the function defining thread) would be preferable. It may
+also make sense to keep thread references in a shared 
+environment of the library's functions, and/or require
+all callbacks to be defined in the main lua state (so 
+they the state is guaranteed to outlive other threads).
+
+-=-
+
 2007-August-15 e
 
 Version "0.6-devel"

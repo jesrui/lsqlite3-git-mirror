@@ -1,16 +1,10 @@
-# makefile for lsqlite3 library for Lua
+# Makefile for lsqlite3 library for Lua
 
 ifneq "$(shell pkg-config --version)" ""
   # automagic setup (OS X fink, Linux apt-get, ..)
   #
   LUAINC= $(shell pkg-config --cflags lua)
   LUALIB= $(shell pkg-config --libs lua)
-  LUAEXE= lua
-  # Now, we actually want to _not_ push in stuff to the distro Lua CMOD directory,
-  # way better to play within /usr/local/lib/lua/5.1/
-  #LUACMOD= $(shell pkg-config --variable=INSTALL_CMOD lua)
-  LUACMOD= /usr/local/lib/lua/5.1/
-  #
   SQLITE3INC= $(shell pkg-config --cflags sqlite3)
   SQLITE3LIB= $(shell pkg-config --libs sqlite3)
 else
@@ -18,18 +12,19 @@ else
   #
   BASE= /usr/local
   LUAINC= -I$(BASE)/include
-  LUAEXE= $(BASE)/bin/lua.exe
-#  LUALIB= -L$(BASE)/lib -llua51
-#  LUACMOD= $(BASE)/lib/lua/5.1/
-#  Windows' LUA_CDIR and LUALIB are both the same as the Lua executable's directory...
-  LUALIB= -L$(BASE)/bin -llua51
-  LUACMOD= $(BASE)/bin
-  #
+  LUALIB=
   SQLITE3INC= -I$(BASE)/include
-  SQLITE3LIB= -L$(BASE)/bin -lsqlite3
+  SQLITE3LIB= -L$(BASE)/lib -lsqlite3
+#  Windows' LUALIB is the same as the Lua executable's directory...
+#  LUALIB= -L$(BASE)/bin -llua51
   #
   POD2HTML= perl -x -S doc/pod2html.pl
 endif
+
+LUAEXE= lua
+
+INSTALL= install -p
+INSTALLPATH= $(LUAEXE) installpath.lua
 
 TMP=./tmp
 DISTDIR=./archive
@@ -40,14 +35,15 @@ SHFLAGS=-shared
 UNAME= $(shell uname)
 ifeq "$(UNAME)" "Linux"
   _SO=so
-  SHFLAGS= -fPIC
+  SHFLAGS=-shared -fPIC
 endif
 ifneq "" "$(findstring BSD,$(UNAME))"
   _SO=so
 endif
 ifeq "$(UNAME)" "Darwin"
-  _SO=bundle
-  SHFLAGS= -bundle
+  _SO=so
+  SHFLAGS=-fPIC -arch i686 -arch x86_64
+  SOFLAGS=-dynamiclib -single_module -undefined dynamic_lookup -arch i686 -arch x86_64
 endif
 ifneq "" "$(findstring msys,$(OSTYPE))"		# 'msys'
   _SO=dll
@@ -59,7 +55,7 @@ ifndef _SO
 endif
 
 # no need to change anything below here - HAH!
-CFLAGS= $(INCS) $(DEFS) $(WARN) -O2 $(SHFLAGS)
+CFLAGS= $(INCS) $(DEFS) $(WARN) -O2 -fomit-frame-pointer $(SHFLAGS)
 WARN= -Wall #-ansi -pedantic -Wall
 INCS= $(LUAINC) $(SQLITE3INC)
 LIBS= $(LUALIB) $(SQLITE3LIB)
@@ -73,17 +69,17 @@ TARFILE = $(DISTDIR)/$(MYLIB)-$(VER).tar.gz
 OBJS= $(MYLIB).o
 T= $(MYLIB).$(_SO)
 
-all: $T
+all: $(T)
 
-test: $T
+test: $(T)
 	$(LUAEXE) test.lua
 	$(LUAEXE) tests-sqlite3.lua
 
-$T:	$(OBJS)
-	$(CC) $(SHFLAGS) -o $@ $(OBJS) $(LIBS)
+$(T):	$(OBJS)
+	$(CC) $(SHFLAGS) $(SOFLAGS) -o $@ $(OBJS) $(LIBS)
 
-install:
-	cp $T $(LUACMOD)
+install: $(T)
+	$(INSTALL) $< `$(INSTALLPATH) $(MYLIB)`
 
 clean:
 	rm -f $(OBJS) $T core core.* a.out test.db
@@ -95,7 +91,7 @@ dist:	html
 	echo 'Exporting...'
 	mkdir -p $(TMP)
 	mkdir -p $(DISTDIR)
-	svn export -r HEAD . $(TMP)/$(MYLIB)-$(VER)
+	svn export . $(TMP)/$(MYLIB)-$(VER)
 	mkdir -p $(TMP)/$(MYLIB)-$(VER)/doc
 	cp -p doc/lsqlite3.html $(TMP)/$(MYLIB)-$(VER)/doc
 	echo 'Compressing...'
