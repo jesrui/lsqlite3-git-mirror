@@ -1,7 +1,7 @@
 package = "lsqlite3"
 version = "0.7-1"
 source = {
-    url = "http://luaforge.net/frs/download.php/2565/lsqlite3-7.tar.gz"
+    url = "http://luaforge.net/frs/download.php/4472/lsqlite3-7.tar.gz"
 }
 description = {
     summary = "A binding for Lua to the SQLite3 database library",
