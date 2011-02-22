@@ -1,3 +1,4 @@
+<nowiki>
 <div name="index">
 <p><a name="__index__"></a></p>
 
@@ -930,7 +931,6 @@ making it available.</p>
 </p>
 <hr />
 <h1><a name="license">LICENSE</a></h1>
-<nowiki>
 <pre>
     /************************************************************************
     * lsqlite3                                                              *
