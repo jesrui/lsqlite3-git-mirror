@@ -1,6 +1,6 @@
 # Makefile for lsqlite3 library for Lua
 
-ifneq "$(shell pkg-config --version)" ""
+ifneq "$(shell pkg-config --version)" "0.25"
   # automagic setup (OS X fink, Linux apt-get, ..)
   #
   LUAINC= $(shell pkg-config --cflags lua)
@@ -11,7 +11,7 @@ else
   # manual setup (change these to reflect your Lua installation)
   #
   BASE= /usr/local
-  LUAINC= -I$(BASE)/include
+  LUAINC= -I/Users/e/Dev/unzipped/lua-5.2.0-beta/install/include
   LUALIB=
   SQLITE3INC= -I$(BASE)/include
   SQLITE3LIB= -L$(BASE)/lib -lsqlite3
