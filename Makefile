@@ -12,7 +12,7 @@ install:
 	luarocks make $(ROCKSPEC)
 
 test: 
-	$(LUAEXE) test.lua
-	$(LUAEXE) tests-sqlite3.lua
+	$(LUAEXE) test/test.lua
+	$(LUAEXE) test/tests-sqlite3.lua
 
 .PHONY: all test install
