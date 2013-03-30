@@ -1,6 +1,6 @@
 /************************************************************************
 * lsqlite3                                                              *
-* Copyright (C) 2002-2007 Tiago Dionizio, Doug Currie                   *
+* Copyright (C) 2002-2013 Tiago Dionizio, Doug Currie                   *
 * All rights reserved.                                                  *
 * Author    : Tiago Dionizio <tiago.dionizio@ist.utl.pt>                *
 * Author    : Doug Currie <doug.currie@alum.mit.edu>                    *
