@@ -1,25 +1,21 @@
 # Makefile for lsqlite3 library for Lua
+# This file is old and crufty. 
+# We recommend you make lsqlite3 using luarocks.
+# A local make+install (to test source changes) can be done with:
+# sudo luarocks make lsqlite3-0.9-1.rockspec 
+#
 
-ifneq "$(shell pkg-config --version)" "0.25"
-  # automagic setup (OS X fink, Linux apt-get, ..)
-  #
-  LUAINC= $(shell pkg-config --cflags lua)
-  LUALIB= $(shell pkg-config --libs lua)
-  SQLITE3INC= $(shell pkg-config --cflags sqlite3)
-  SQLITE3LIB= $(shell pkg-config --libs sqlite3)
-else
-  # manual setup (change these to reflect your Lua installation)
-  #
-  BASE= /usr/local
-  LUAINC= -I/Users/e/Dev/unzipped/lua-5.2.0-beta/install/include
-  LUALIB=
-  SQLITE3INC= -I$(BASE)/include
-  SQLITE3LIB= -L$(BASE)/lib -lsqlite3
+# manual setup (change these to reflect your Lua installation)
+#
+BASE= /usr/local
+LUAINC= -I$(BASE)/include
+LUALIB=
+SQLITE3INC= -I$(BASE)/include
+SQLITE3LIB= -L$(BASE)/lib -lsqlite3
 #  Windows' LUALIB is the same as the Lua executable's directory...
 #  LUALIB= -L$(BASE)/bin -llua51
-  #
-  POD2HTML= perl -x -S doc/pod2html.pl
-endif
+#
+POD2HTML= perl -x -S doc/pod2html.pl
 
 LUAEXE= lua
 
@@ -43,7 +39,8 @@ endif
 ifeq "$(UNAME)" "Darwin"
   _SO=so
   SHFLAGS=-fPIC -arch i686 -arch x86_64
-  SOFLAGS=-dynamiclib -single_module -undefined dynamic_lookup -arch i686 -arch x86_64
+# SOFLAGS=-dynamiclib -single_module -undefined dynamic_lookup -arch i686 -arch x86_64
+  SOFLAGS=-dynamic -bundle -undefined dynamic_lookup -all_load -arch i686 -arch x86_64 
 endif
 ifneq "" "$(findstring msys,$(OSTYPE))"		# 'msys'
   _SO=dll
