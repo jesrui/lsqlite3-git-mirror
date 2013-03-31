@@ -26,6 +26,9 @@
 
 --]]--------------------------------------------------------------------------
 
+-- extended for LuaSQLite3, and for Lua 5.2 (using lunitx)
+-- Copyright (c) 2005-13 Doug Currie
+-- Same license as above
 
 local sqlite3 = require "lsqlite3"
 
@@ -494,6 +497,100 @@ function b.test_no_parameter_names_2()
 end
 
 
+
+
+----------------------------
+-- Tests for update_hook  --
+----------------------------
+
+uh = lunit_TestCase("Update Hook")
+
+function uh.setup()
+  uh.db = assert( sqlite3.open_memory() )
+  uh.udtbl = {[sqlite3.INSERT]=0, [sqlite3.UPDATE]=0, [sqlite3.DELETE]=0}
+  uh.uttblsz = function () local sz = 0; for _,_ in pairs(uh.udtbl) do sz = sz + 1 end return sz end
+  assert_number( uh.db:exec("CREATE TABLE test ( id INTEGER PRIMARY KEY, content VARCHAR );") )
+end
+
+function uh.teardown()
+  assert_number( uh.db:close() )
+end
+
+function uh.test_create()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    --print("Sqlite Update Hook:", op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+end
+
+function uh.test_insert1()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 1, uh.udtbl[sqlite3.INSERT] )
+end
+
+function uh.test_insert3()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+  assert_equal( 3, uh.uttblsz() )
+end
+
+function uh.test_insert3update1()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
+  assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+  assert_equal( 3, uh.uttblsz() )
+end
+
+function uh.test_insert3delete1()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
+  assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
+  assert_equal( 3, uh.uttblsz() )
+end
+
+function uh.test_insert3update1delete1()
+  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
+    ud[op] = ud[op] + 1
+  end, uh.udtbl))
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
+  assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
+  assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
+  assert_equal( 3, uh.uttblsz() )
+end
 
 
 

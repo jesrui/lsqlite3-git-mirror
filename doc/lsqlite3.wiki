@@ -43,7 +43,8 @@
 		<li><a href="#db_progress_handler">db:progress_handler</a></li>
 		<li><a href="#db_rows">db:rows</a></li>
 		<li><a href="#db_total_changes">db:total_changes</a></li>
-		<li><a href="#db_trace">db:trace</a></li>
+        <li><a href="#db_trace">db:trace</a></li>
+        <li><a href="#db_update_hook">db:update_hook</a></li>
 		<li><a href="#db_urows">db:urows</a></li>
 	</ul>
 
@@ -106,7 +107,7 @@
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
-<p><strong>LuaSQLite 3</strong> - a Lua 5.1 wrapper for the SQLite3 library</p>
+<p><strong>LuaSQLite 3</strong> - a Lua 5.1 and Lua 5.2 wrapper for the SQLite3 library</p>
 <p>
 </p>
 <hr />
@@ -114,7 +115,7 @@
 <p><strong>LuaSQLite 3</strong> is a thin wrapper around the public domain SQLite3
 database engine.</p>
 <p>The <code>lsqlite3</code> module supports the creation and manipulation of 
-SQLite3 databases. After a <code>require('lsqlite3')</code> the exported 
+SQLite3 databases. After a <code>sqlite3 = require('lsqlite3')</code> the exported 
 functions are called with prefix <code>sqlite3</code>. However, most sqlite3 
 functions are called via an object-oriented interface to either 
 database or SQL statement objects; see below for details.</p>
@@ -130,7 +131,7 @@ some familiarity with the SQLite3 API.</p>
 <hr />
 <h1><a name="download">DOWNLOAD</a></h1>
 <p><strong>LuaSQLite 3</strong> source code can be downloaded from its 
-LuaForge (<a href="http://luaforge.net/projects/luasqlite/">http://luaforge.net/projects/luasqlite/</a>) page.</p>
+Fossil (<a href="http://lua.sqlite.org/">http://lua.sqlite.org/</a>) page.</p>
 <p>You will also need to build or obtain an SQLite3 loadable library 
 (DLL or .so). See <a href="http://www.sqlite.org/">http://www.sqlite.org/</a> for obtaining SQLite3 
 source code or downloading a binary SQLite3 library.</p>
@@ -138,8 +139,8 @@ source code or downloading a binary SQLite3 library.</p>
 </p>
 <hr />
 <h1><a name="installation">INSTALLATION</a></h1>
-<p>A <em>Makefile</em> is provided; it assumes an SQLite3 library is already
-installed.</p>
+<p>Luarocks (<a href="http://luarocks.org/">http://luarocks.org/</a>) is the preferred mechanism 
+to build and install <code>lsqlite3</code>; it assumes an SQLite3 library is already installed.</p>
 <p>
 </p>
 <hr />
@@ -150,12 +151,12 @@ also show some example use.</p>
 </p>
 <hr />
 <h1><a name="verification_tests">VERIFICATION TESTS</a></h1>
-<p>The distribution contains some units tests using Michael Roth's
-<code>lunit</code> (which is also included). Some of the tests were also derived 
-from Michael's <strong>lua-sqlite3</strong> module, and more unit tests added by 
-Doug Currie.</p>
+<p>The distribution contains a <em>tests</em> directory with some units tests using 
+an enhanced version of Michael Roth's <code>lunit</code> called <code>lunitx</code>. Some of the 
+tests were also derived from Michael's <strong>lua-sqlite3</strong> module, and more unit tests 
+added by Doug Currie. Get <code>lunitx</code> using Luarocks.</p>
 <p>The distribution also contains some functional tests by Tiago.</p>
-<p>This version of <code>lsqlite3</code> was tested with SQLite 3.7.3.</p>
+<p>This version of <code>lsqlite3</code> was tested with SQLite 3.7.16.1.</p>
 <p>
 </p>
 <hr />
@@ -543,6 +544,19 @@ statement. This callback receives two arguments: the first is the
 string with the SQL statement about to be executed.</p>
 <p>
 </p>
+<h2><a name="db_update_hook">db:update_hook</a></h2>
+<pre>
+        db:update_hook(func,udata)</pre>
+<p>This function installs an update_hook Data Change Notification Callback handler. 
+<code>func</code> is a Lua function that is invoked by SQLite3 whenever a row is updated, 
+inserted or deleted. This callback receives five arguments: the first is the 
+<code>udata</code> argument used when the callback was installed; the second is an 
+integer indicating the operation that caused the callback to be invoked (one of <code>sqlite3.UPDATE</code>,
+<code>sqlite3.INSERT</code>, or <code>sqlite3.DELETE</code>). The third and fourth arguments 
+are the database and table name containing the affected row. The final callback parameter is 
+the rowid of the row. In the case of an update, this is the rowid after the update takes place.</p>
+<p>
+</p>
 <h2><a name="db_urows">db:urows</a></h2>
 <pre>
         db:urows(sql)</pre>
@@ -911,13 +925,25 @@ function (see <a href="#db_create_aggregate"><code>db:create_aggregate()</code><
         PROTOCOL: 15   EMPTY: 16      SCHEMA: 17     TOOBIG: 18     CONSTRAINT: 19
         MISMATCH: 20   MISUSE: 21     NOLFS: 22      FORMAT: 24     RANGE: 25
         NOTADB: 26     ROW: 100       DONE: 101</pre>
+
+<p>plus the Authorizer Action Codes:</p>
+<pre>
+  CREATE_INDEX: 1         CREATE_TABLE: 2       CREATE_TEMP_INDEX: 3  CREATE_TEMP_TABLE: 4
+  CREATE_TEMP_TRIGGER: 5  CREATE_TEMP_VIEW: 6   CREATE_TRIGGER: 7     CREATE_VIEW: 8
+  DELETE: 9               DROP_INDEX: 10        DROP_TABLE: 11        DROP_TEMP_INDEX: 12
+  DROP_TEMP_TABLE: 13     DROP_TEMP_TRIGGER: 14 DROP_TEMP_VIEW: 15    DROP_TRIGGER: 16
+  DROP_VIEW: 17           INSERT: 18            PRAGMA: 19            READ: 20
+  SELECT: 21              TRANSACTION: 22       UPDATE: 23            ATTACH: 24
+  DETACH: 25              ALTER_TABLE: 26       REINDEX: 27           ANALYZE: 28
+  CREATE_VTABLE: 29       DROP_VTABLE: 30       FUNCTION: 31          SAVEPOINT: 32
+</pre>
 <p>For details about their exact meaning please see the <strong>SQLite3
 documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</a>.</p>
 <p>
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This is <code>lsqlite3</code> subversion 8, also known as &quot;devel-0.8&quot;.</p>
+<p>This is <code>lsqlite3</code> version <code>fsl_9</code>, also known as &quot;devel-0.9&quot;.</p>
 <p>
 </p>
 <hr />
@@ -934,7 +960,7 @@ making it available.</p>
 <pre>
     /************************************************************************
     * lsqlite3                                                              *
-    * Copyright (C) 2002-2011 Tiago Dionizio, Doug Currie                   *
+    * Copyright (C) 2002-2013 Tiago Dionizio, Doug Currie                   *
     * All rights reserved.                                                  *
     * Author    : Tiago Dionizio &lt;tiago.dionizio@ist.utl.pt&gt;                *
     * Author    : Doug Currie &lt;doug.currie@alum.mit.edu&gt;                    *
