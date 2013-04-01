@@ -29,6 +29,7 @@
 		<li><a href="#db_changes">db:changes</a></li>
 		<li><a href="#db_close">db:close</a></li>
 		<li><a href="#db_close_vm">db:close_vm</a></li>
+        <li><a href="#db_commit_hook">db:commit_hook</a></li>
 		<li><a href="#db_create_aggregate">db:create_aggregate</a></li>
 		<li><a href="#db_create_collation">db:create_collation</a></li>
 		<li><a href="#db_create_function">db:create_function</a></li>
@@ -41,6 +42,7 @@
 		<li><a href="#db_nrows">db:nrows</a></li>
 		<li><a href="#db_prepare">db:prepare</a></li>
 		<li><a href="#db_progress_handler">db:progress_handler</a></li>
+        <li><a href="#db_rollback_hook">db:rollback_hook</a></li>
 		<li><a href="#db_rows">db:rows</a></li>
 		<li><a href="#db_total_changes">db:total_changes</a></li>
         <li><a href="#db_trace">db:trace</a></li>
@@ -273,6 +275,16 @@ have been finalized before this function is called. The function returns
 This function returns nothing.</p>
 <p>
 </p>
+<h2><a name="db_commit_hook">db:commit_hook</a></h2>
+<pre>
+        db:commit_hook(func,udata)</pre>
+<p>This function installs a commit_hook callback handler. <code>func</code> is a Lua function 
+that is invoked by SQLite3 whenever a transaction is commited. This callback receives one argument: 
+the <code>udata</code> argument used when the callback was installed. If <code>func</code> returns <code>false</code>
+or <code>nil</code> the COMMIT is allowed to prodeed, otherwise the COMMIT is converted to a ROLLBACK.</p> 
+<p>See: <a href="#db_rollback_hook">db:rollback_hook</a> and <a href="#db_update_hook">db:update_hook</a></p>
+<p>
+</p>
 <h2><a name="db_create_aggregate">db:create_aggregate</a></h2>
 <pre>
         db:create_aggregate(name,nargs,step,final)</pre>
@@ -498,6 +510,15 @@ and the containing <code>db:exec()</code> or <code>stmt:step()</code> call retur
 queries.</p>
 <p>
 </p>
+<h2><a name="db_rollback_hook">db:rollback_hook</a></h2>
+<pre>
+        db:rollback_hook(func,udata)</pre>
+<p>This function installs a rollback_hook callback handler. <code>func</code> is a Lua function 
+that is invoked by SQLite3 whenever a transaction is rolled back. This callback receives one argument: 
+the <code>udata</code> argument used when the callback was installed.</p> 
+<p>See: <a href="#db_commit_hook">db:commit_hook</a> and <a href="#db_update_hook">db:update_hook</a></p>
+<p>
+</p>
 <h2><a name="db_rows">db:rows</a></h2>
 <pre>
         db:rows(sql)</pre>
@@ -555,6 +576,7 @@ integer indicating the operation that caused the callback to be invoked (one of 
 <code>sqlite3.INSERT</code>, or <code>sqlite3.DELETE</code>). The third and fourth arguments 
 are the database and table name containing the affected row. The final callback parameter is 
 the rowid of the row. In the case of an update, this is the rowid after the update takes place.</p>
+<p>See: <a href="#db_commit_hook">db:commit_hook</a> and <a href="#db_rollback_hook">db:rollback_hook</a></p>
 <p>
 </p>
 <h2><a name="db_urows">db:urows</a></h2>
