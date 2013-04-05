@@ -5,7 +5,7 @@
 
     Copyright (c) 2004, 2005 Michael Roth <mroth@nessie.de>
 
-    Permission is hereby granted, free of charge, to any person 
+    Permission is hereby granted, free of charge, to any person
     obtaining a copy of this software and associated documentation
     files (the "Software"), to deal in the Software without restriction,
     including without limitation the rights to use, copy, modify, merge,
@@ -13,7 +13,7 @@
     and to permit persons to whom the Software is furnished to do so,
     subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be 
+    The above copyright notice and this permission notice shall be
     included in all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -38,16 +38,16 @@ local lunit = require "lunitx"
 
 local tests_sqlite3
 
-if _VERSION >= 'Lua 5.2' then 
+if _VERSION >= 'Lua 5.2' then
 
     tests_sqlite3 = lunit.module('tests-sqlite3','seeall')
     _ENV = tests_sqlite3
-    
+
 else
 
     module('tests_sqlite3', lunit.testcase, package.seeall)
     tests_sqlite3 = _M
-    
+
 end
 
 -- compat
@@ -242,19 +242,19 @@ lunit_wrap("Column Info Test", function()
   local db = assert_userdata( sqlite3.open_memory() )
   assert_number( db:exec("CREATE TABLE test (id INTEGER, name TEXT)") )
   local stmt = assert_userdata( db:prepare("SELECT * FROM test") )
-  
+
   assert_equal(2, stmt:columns(), "Wrong number of columns." )
-  
+
   local names = assert_table( stmt:get_names() )
   assert_equal(2, #(names), "Wrong number of names.")
   assert_equal("id", names[1] )
   assert_equal("name", names[2] )
-  
+
   local types = assert_table( stmt:get_types() )
   assert_equal(2, #(types), "Wrong number of declaration types.")
   assert_equal("INTEGER", types[1] )
   assert_equal("TEXT", types[2] )
-  
+
   assert_equal( sqlite3.OK, stmt:finalize() )
   assert_equal( sqlite3.OK, db:close() )
 end)
@@ -508,7 +508,6 @@ uh = lunit_TestCase("Update Hook")
 function uh.setup()
   uh.db = assert( sqlite3.open_memory() )
   uh.udtbl = {[sqlite3.INSERT]=0, [sqlite3.UPDATE]=0, [sqlite3.DELETE]=0}
-  uh.crtbl = {0, 0}
   uh.uttblsz = function () local sz = 0; for _,_ in pairs(uh.udtbl) do sz = sz + 1 end return sz end
   assert_number( uh.db:exec("CREATE TABLE test ( id INTEGER PRIMARY KEY, content VARCHAR );") )
 end
@@ -594,69 +593,6 @@ function uh.test_insert3update1delete1()
 end
 
 
-function uh.test_xinsert3update1delete1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
-  assert_nil( uh.db:commit_hook(function (ud) ud[1] = ud[1] + 1; return false end, uh.crtbl))
-  assert_nil( uh.db:rollback_hook(function (ud) ud[2] = ud[2] + 1 end, uh.crtbl))
-  assert_equal( sqlite3.OK, uh.db:exec("BEGIN;") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
-  assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
-  assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
-  assert_equal( sqlite3.OK, uh.db:exec("COMMIT;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
-  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
-  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
-  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
-  assert_equal( 1, uh.crtbl[1] )
-  assert_equal( 0, uh.crtbl[2] )
-end
-
-function uh.test_yinsert3update1delete1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
-  assert_nil( uh.db:commit_hook(function (ud) ud[1] = ud[1] + 1; return false end, uh.crtbl))
-  assert_nil( uh.db:rollback_hook(function (ud) ud[2] = ud[2] + 1 end, uh.crtbl))
-  assert_equal( sqlite3.OK, uh.db:exec("BEGIN;") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
-  assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
-  assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
-  assert_equal( sqlite3.OK, uh.db:exec("ROLLBACK;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
-  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
-  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
-  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
-  assert_equal( 0, uh.crtbl[1] )
-  assert_equal( 1, uh.crtbl[2] )
-end
-
-function uh.test_zinsert3update1delete1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
-  assert_nil( uh.db:commit_hook(function (ud) ud[1] = ud[1] + 1; return false end, uh.crtbl))
-  assert_nil( uh.db:rollback_hook(function (ud) ud[2] = ud[2] + 1 end, uh.crtbl))
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
-  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
-  assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
-  assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
-  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
-  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
-  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
-  assert_equal( 5, uh.crtbl[1] )
-  assert_equal( 0, uh.crtbl[2] )
-end
 
 
 
@@ -683,9 +619,9 @@ end
 --[===[
 function bug.test_1()
   bug.db:exec("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)")
-  
+
   local query = assert_userdata( bug.db:prepare("SELECT id FROM test WHERE value=?") )
-  
+
   assert_table ( query:bind_values("1") )
   assert_nil   ( query:first_cols() )
   assert_table ( query:bind_values("2") )
@@ -701,19 +637,19 @@ function bug.test_nils()   -- appeared in lua-5.1 (holes in arrays)
     assert_equal(4, arg4)
     assert_nil(arg5)
   end
-  
+
   bug.db:create_function("test_nils", 5, function(arg1, arg2, arg3, arg4, arg5)
     check(arg1, arg2, arg3, arg4, arg5)
   end, {})
-  
+
   assert_number( bug.db:exec([[ SELECT test_nils(1, 2, NULL, 4, NULL) ]]) )
-  
+
   for arg1, arg2, arg3, arg4, arg5 in bug.db:urows([[ SELECT 1, 2, NULL, 4, NULL ]])
-  do check(arg1, arg2, arg3, arg4, arg5) 
+  do check(arg1, arg2, arg3, arg4, arg5)
   end
-  
+
   for row in bug.db:rows([[ SELECT 1, 2, NULL, 4, NULL ]])
-  do assert_table( row ) 
+  do assert_table( row )
      check(row[1], row[2], row[3], row[4], row[5])
   end
 end
