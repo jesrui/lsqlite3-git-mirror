@@ -1,8 +1,8 @@
 package = "lsqlite3"
-version = "0.9-1"
+version = "0.9.1-1"
 source = {
-    url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09.zip?uuid=fsl_9",
-    file = "lsqlite3_fsl09.zip"
+    url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09b.zip?uuid=fsl_9b",
+    file = "lsqlite3_fsl09b.zip"
 }
 description = {
     summary = "A binding for Lua to the SQLite3 database library",
