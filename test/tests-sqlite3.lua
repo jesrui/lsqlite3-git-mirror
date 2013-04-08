@@ -508,92 +508,309 @@ uh = lunit_TestCase("Update Hook")
 function uh.setup()
   uh.db = assert( sqlite3.open_memory() )
   uh.udtbl = {[sqlite3.INSERT]=0, [sqlite3.UPDATE]=0, [sqlite3.DELETE]=0}
-  uh.uttblsz = function () local sz = 0; for _,_ in pairs(uh.udtbl) do sz = sz + 1 end return sz end
-  assert_number( uh.db:exec("CREATE TABLE test ( id INTEGER PRIMARY KEY, content VARCHAR );") )
-end
-
-function uh.teardown()
-  assert_number( uh.db:close() )
-end
-
-function uh.test_create()
+  uh.crtbl = {0, 0}
   assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
     --print("Sqlite Update Hook:", op, dname, tname, rowid)
     ud[op] = ud[op] + 1
   end, uh.udtbl))
+  uh.uttblsz = function () local sz = 0; for _,_ in pairs(uh.udtbl) do sz = sz + 1 end return sz end
+  -- enable foreign keys!
+  assert_number( uh.db:exec("PRAGMA foreign_keys = ON;") )
+  assert_number( uh.db:exec("CREATE TABLE test ( id INTEGER PRIMARY KEY, content VARCHAR );") )
+  assert_number( uh.db:exec("CREATE TABLE T1 ( id INTEGER PRIMARY KEY, content VARCHAR );") )
+  assert_number( uh.db:exec("CREATE TABLE T2 ( id INTEGER PRIMARY KEY, content VARCHAR );") )
+end
+
+function uh.teardown()
+  --for k,v in pairs(uh.udtbl) do print(k,v) end
+  assert_equal( 3, uh.uttblsz() )
+  assert_number( uh.db:close() )
 end
 
 function uh.test_insert1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
   assert_equal( 1, uh.udtbl[sqlite3.INSERT] )
 end
 
 function uh.test_insert3()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
   assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
   assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
   assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
+
 end
 
-function uh.test_insert3update1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
+function uh.test_insert3_update1()
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
   assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
   assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
   assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
   assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
 end
 
-function uh.test_insert3delete1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
+function uh.test_insert3_delete1()
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
   assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
   assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
   assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
   assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
 end
 
-function uh.test_insert3update1delete1()
-  assert_nil(uh.db:update_hook( function(ud, op, dname, tname, rowid)
-    ud[op] = ud[op] + 1
-  end, uh.udtbl))
+function uh.test_insert3_update1_delete1()
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello World');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Lua');") )
   assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO test VALUES (NULL, 'Hello Sqlite3');") )
   assert_equal( sqlite3.OK, uh.db:exec("UPDATE test SET content = 'Hello Again World' WHERE id = 1;") )
   assert_equal( sqlite3.OK, uh.db:exec("DELETE FROM test WHERE id = 2;") )
-  --for k,v in pairs(uh.udtbl) do print(k,v) end
   assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
   assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
   assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
-  assert_equal( 3, uh.uttblsz() )
 end
 
+function uh.test_insert_select()
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello Sqlite3');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T2 SELECT * FROM T1;") )
+  assert_equal( 6, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
 
+function uh.test_trigger_insert()
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TRIGGER after_insert_T1
+    AFTER INSERT ON T1
+    FOR EACH ROW
+    BEGIN
+      INSERT INTO T2 VALUES(NEW.id, NEW.content);
+    END;
+  ]]) )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello Sqlite3');") )
+  assert_equal( 6, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
 
+function uh.test_cascade_update()
+  assert_equal( sqlite3.OK, uh.db:exec("DROP TABLE T2;") )
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1 ON UPDATE CASCADE, content VARCHAR );
+  ]]) )
+
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'c');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'd');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T2 SELECT * FROM T1;") )
+  assert_equal( sqlite3.OK, uh.db:exec("UPDATE T1 SET id = id + 10 WHERE id < 3;") )
+
+  assert_equal( 8, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 4, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
+
+function uh.test_cascade_update_restrict()
+  assert_equal( sqlite3.OK, uh.db:exec("DROP TABLE T2;") )
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1 ON UPDATE RESTRICT, content VARCHAR );
+  ]]) )
+
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'c');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'd');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T2 SELECT * FROM T1;") )
+  -- the update_hook with rowid=11 *DOES* get triggered before the RESTRICT constraint is enforced
+  assert_equal( sqlite3.CONSTRAINT, uh.db:exec("UPDATE T1 SET id = id + 10 WHERE id < 3;") )
+
+  assert_equal( 8, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
+
+function uh.test_cascade_delete_restrict()
+  assert_equal( sqlite3.OK, uh.db:exec("DROP TABLE T2;") )
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1 ON DELETE RESTRICT, content VARCHAR );
+  ]]) )
+
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'c');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'd');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T2 SELECT * FROM T1;") )
+  -- the update_hook with rowid=1 *DOES* get triggered before the RESTRICT constraint is enforced
+  assert_equal( sqlite3.CONSTRAINT, uh.db:exec("DELETE FROM T1 WHERE id < 3;") )
+
+  assert_equal( 8, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 1, uh.udtbl[sqlite3.DELETE] )
+end
+
+function uh.test_fk_violate_insert()
+  assert_equal( sqlite3.OK, uh.db:exec("DROP TABLE T2;") )
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1, content VARCHAR );
+  ]]) )
+
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  -- no update hook triggered here
+  assert_equal( sqlite3.CONSTRAINT, uh.db:exec("INSERT INTO T2 VALUES(99, 'xxx')") )
+
+  assert_equal( 2, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 0, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
+
+function uh.test_fk_violate_update()
+  assert_equal( sqlite3.OK, uh.db:exec("DROP TABLE T2;") )
+  assert_equal( sqlite3.OK, uh.db:exec([[
+    CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1, content VARCHAR );
+  ]]) )
+
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  assert_equal( sqlite3.OK, uh.db:exec("INSERT INTO T2 VALUES (1, 'a');") )
+  -- update hook triggered
+  assert_equal( sqlite3.CONSTRAINT, uh.db:exec("UPDATE T2 SET id = 99 WHERE id = 1;") )
+
+  assert_equal( 3, uh.udtbl[sqlite3.INSERT] )
+  assert_equal( 1, uh.udtbl[sqlite3.UPDATE] )
+  assert_equal( 0, uh.udtbl[sqlite3.DELETE] )
+end
+
+----------------------------------------------
+-- Tests for commit_hook and rollback_hook  --
+----------------------------------------------
+
+crh = lunit_TestCase("Commit/Rollback Hook")
+
+function crh.setup()
+  crh.db = assert( sqlite3.open_memory() )
+  crh.crtbl = {0, 0}
+  assert_number( crh.db:exec("PRAGMA foreign_keys = ON;") )
+  assert_number( crh.db:exec("CREATE TABLE T1 ( id INTEGER PRIMARY KEY, content VARCHAR );") )
+  assert_number( crh.db:exec("CREATE TABLE T2 ( id INTEGER PRIMARY KEY REFERENCES T1, content VARCHAR );") )
+
+  -- reset commit hook return value
+  crh.commit_hook_returnvalue = false
+
+  assert_nil( crh.db:commit_hook(function (ud)
+    -- print('Commit hook')
+    ud[1] = ud[1] + 1;
+    return crh.commit_hook_returnvalue
+  end, crh.crtbl))
+
+  assert_nil( crh.db:rollback_hook(function (ud)
+    -- print('Rollback hook')
+    ud[2] = ud[2] + 1
+  end, crh.crtbl))
+end
+
+function crh.teardown()
+  assert_number( crh.db:close() )
+end
+
+function crh.test_simple_transaction_commit()
+  assert_equal( sqlite3.OK, crh.db:exec("BEGIN;") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec("UPDATE T1 SET content = 'Hello Again World' WHERE id = 1;") )
+  assert_equal( sqlite3.OK, crh.db:exec("DELETE FROM T1 WHERE id = 2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("COMMIT;") )
+  assert_equal( 1, crh.crtbl[1] )
+  assert_equal( 0, crh.crtbl[2] )
+end
+
+function crh.test_simple_transaction_prohibit()
+  -- if the commit hook returns anything except false or nil, the commit would turn into rollback
+  crh.commit_hook_returnvalue = 1
+
+  assert_equal( sqlite3.OK, crh.db:exec("BEGIN;") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec("UPDATE T1 SET content = 'Hello Again World' WHERE id = 1;") )
+  assert_equal( sqlite3.OK, crh.db:exec("DELETE FROM T1 WHERE id = 2;") )
+  assert_equal( sqlite3.CONSTRAINT, crh.db:exec("COMMIT;") )
+  -- commit hook gets called and returns 1 triggering a rollback
+  assert_equal( 1, crh.crtbl[1] )
+  assert_equal( 1, crh.crtbl[2] )
+end
+
+function crh.test_simple_transaction_rollback()
+  assert_equal( sqlite3.OK, crh.db:exec("BEGIN;") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec("UPDATE T1 SET content = 'Hello Again World' WHERE id = 1;") )
+  assert_equal( sqlite3.OK, crh.db:exec("DELETE FROM T1 WHERE id = 2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("ROLLBACK;") )
+  assert_equal( 0, crh.crtbl[1] )
+  assert_equal( 1, crh.crtbl[2] )
+end
+
+function crh.test_statement_level_transaction()
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec("UPDATE T1 SET content = 'Hello Again World' WHERE id = 1;") )
+  assert_equal( sqlite3.OK, crh.db:exec("DELETE FROM T1 WHERE id = 2;") )
+  assert_equal( 3, crh.crtbl[1] )
+  assert_equal( 0, crh.crtbl[2] )
+end
+
+function crh.test_statement_level_fk_violate_insert()
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'a');") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'b');") )
+  -- implicit statement-level transaction rollback + error
+  assert_equal( sqlite3.CONSTRAINT, crh.db:exec("INSERT INTO T2 VALUES(99, 'xxx')") )
+  assert_equal( 2, crh.crtbl[1] )
+  assert_equal( 1, crh.crtbl[2] )
+end
+
+function crh.test_transaction_fk_violate_update()
+  assert_equal( sqlite3.OK, crh.db:exec("BEGIN;") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec("INSERT INTO T2 VALUES (1, 'xyz');") )
+  -- Doesn't trigger rollback hook because the implicit update statement transaction
+  -- is nested inside our explicit transaction. However we *do* get an error.
+  assert_equal( sqlite3.CONSTRAINT, crh.db:exec("UPDATE T2 SET id = 99 WHERE id = 1;") )
+  -- rollback explicitly
+  assert_equal( sqlite3.OK, crh.db:exec("ROLLBACK;") )
+
+  assert_equal( 0, crh.crtbl[1] )
+  assert_equal( 1, crh.crtbl[2] )
+end
+
+function crh.test_savepoint_nested_commit()
+  assert_equal( sqlite3.OK, crh.db:exec("SAVEPOINT S1;") )
+  assert_equal( sqlite3.OK, crh.db:exec(" INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec(" INSERT INTO T1 VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, crh.db:exec(" SAVEPOINT S2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("  INSERT INTO T1 VALUES (NULL, 'Hello Sqlite3');") )
+  -- nested transactions don't trigger commit/rollback hooks
+  assert_equal( sqlite3.OK, crh.db:exec(" RELEASE S2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("RELEASE S1;") )
+  assert_equal( 1, crh.crtbl[1] )
+  assert_equal( 0, crh.crtbl[2] )
+end
+
+function crh.test_savepoint_nested_rollback()
+  assert_equal( sqlite3.OK, crh.db:exec("SAVEPOINT S1;") )
+  assert_equal( sqlite3.OK, crh.db:exec(" INSERT INTO T1 VALUES (NULL, 'Hello World');") )
+  assert_equal( sqlite3.OK, crh.db:exec(" INSERT INTO T1 VALUES (NULL, 'Hello Lua');") )
+  assert_equal( sqlite3.OK, crh.db:exec(" SAVEPOINT S2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("  INSERT INTO T1 VALUES (NULL, 'Hello Sqlite3');") )
+  -- nested transactions don't trigger commit/rollback hooks
+  assert_equal( sqlite3.OK, crh.db:exec(" ROLLBACK TO S2;") )
+  assert_equal( sqlite3.OK, crh.db:exec("RELEASE S1;") )
+  assert_equal( 1, crh.crtbl[1] )
+  assert_equal( 0, crh.crtbl[2] )
+end
 
 
 --------------------------------------------
