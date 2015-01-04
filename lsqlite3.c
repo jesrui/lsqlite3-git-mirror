@@ -272,10 +272,9 @@ static int stepvm(lua_State *L, sdb_vm *svm) {
     }
 #else
     result = sqlite3_step(svm->vm);
-
-    if ( result==SQLITE_ERROR ) {
-        sqlite3_reset (svm->vm);
-    }
+//    if ( result==SQLITE_ERROR ) {
+//        sqlite3_reset (svm->vm);
+//    }
 #endif
     return result;
 }
@@ -356,6 +355,14 @@ static void dbvm_check_bind_index(lua_State *L, sdb_vm *svm, int index) {
     if (index < 1 || index > sqlite3_bind_parameter_count(svm->vm)) {
         luaL_error(L, "bind index out of range [1..%d]", sqlite3_bind_parameter_count(svm->vm));
     }
+}
+
+static int dbvm_last_insert_rowid(lua_State *L) {
+    sdb_vm *svm = lsqlite_checkvm(L, 1);
+    /* conversion warning: int64 -> luaNumber */
+    sqlite_int64 rowid = sqlite3_last_insert_rowid(svm->db->db);
+    PUSH_INT64(L, rowid, lua_pushfstring(L, "%ll", rowid));
+    return 1;
 }
 
 /*
@@ -2129,6 +2136,8 @@ static const luaL_Reg vmlib[] = {
     {"rows",                dbvm_rows               },
     {"urows",               dbvm_urows              },
     {"nrows",               dbvm_nrows              },
+
+    {"last_insert_rowid",   dbvm_last_insert_rowid  },
 
     /* compatibility names (added by request) */
     {"idata",               dbvm_get_values         },

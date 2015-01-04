@@ -440,6 +440,27 @@ function st.test_bind_by_names()
   assert_number( stmt:finalize() )
 end
 
+function st.test_last_insert_rowid()
+  local stmt = assert_userdata( st.db:prepare("INSERT INTO test VALUES (:id, :name)")  )
+  local args = { }
+  args.id = 5
+  args.name = "Hello girls"
+  assert( stmt:bind_names(args) )
+  assert_number( stmt:step() )
+  assert_number( stmt:reset() )
+  assert_number( stmt:last_insert_rowid() )
+  assert_equal( stmt:last_insert_rowid(), 4 )
+  args.id = 4
+  args.name = "Hello boys"
+  assert( stmt:bind_names(args) )
+  assert_number( stmt:step() )
+  assert_number( stmt:reset() )
+  assert_number( stmt:last_insert_rowid() )
+  assert_equal( stmt:last_insert_rowid(), 5 )
+  st.check_content{ "Hello World", "Hello Lua", "Hello sqlite3",  "Hello boys", "Hello girls" }
+  assert_number( stmt:finalize() )
+end
+
 
 
 --------------------------------
