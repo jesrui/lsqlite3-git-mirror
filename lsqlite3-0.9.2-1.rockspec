@@ -1,5 +1,5 @@
 package = "lsqlite3"
-version = "0.9.1-2"
+version = "0.9.2-1"
 source = {
     url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09t.zip?uuid=fsl_9t",
     file = "lsqlite3_fsl09t.zip"
@@ -17,7 +17,7 @@ description = {
     homepage = "http://lua.sqlite.org/"
 }
 dependencies = {
-    "lua >= 5.1, < 5.3"
+    "lua >= 5.1, < 5.4"
 }
 external_dependencies = {
     SQLITE = {
