@@ -1,3 +1,19 @@
+2015-January-04
+
+Version "0.9.2-devel"
+
+Since the "0.9.1-devel" release of this Lua library...
+
+Lua 5.3 compatibility (backward compatible with Lua 5.2 and Lua 5.1.5).
+
+Finally uses sqlite3_prepare_v2() to preserve detailed error codes in statement stepping
+
+With Lua 5.3, 64-bit integer database values are supported for reading and writing columns; 
+all other values, e.g., status and counts, are now also returned as integers. The only use of
+doubles is for values of that type read from or written to columns.
+
+Added support for stmt:last_insert_rowid() as requested
+
 2013-April-08
 
 Version "0.9.1-devel"
