@@ -139,7 +139,7 @@ static int sqlite_ctx_meta_ref;
         } \
     } while (0)
 #else
-#define PUSH_INT64(L,i64in,str,sz) \
+#define PUSH_INT64(L,i64in,fallback) \
     do { \
         sqlite_int64 i64 = i64in; \
         lua_Number n = (lua_Number)i64; \
@@ -1204,6 +1204,34 @@ static int db_create_collation(lua_State *L) {
     return 0;
 }
 
+/* Thanks to Wolfgang Oertl...
+*/
+static int db_load_extension(lua_State *L) {
+    sdb *db=lsqlite_checkdb(L,1);
+    const char *extname=luaL_optstring(L,2,NULL);
+    const char *entrypoint=luaL_optstring(L,3,NULL);
+    int result;
+    char *errmsg = NULL;
+
+    if (extname == NULL) {
+        result = sqlite3_enable_load_extension(db->db,0); /* disable extension loading */
+    }
+    else {
+        sqlite3_enable_load_extension(db->db,1); /* enable extension loading */
+        result = sqlite3_load_extension(db->db,extname,entrypoint,&errmsg);
+    }
+
+    if (result == SQLITE_OK) {
+        lua_pushboolean(L,1);
+        return 1;
+    }
+
+    lua_pushboolean(L,0); /* so, assert(load_extension(...)) works */
+    lua_pushstring(L,errmsg);
+    sqlite3_free(errmsg);
+    return 2;
+}
+
 /*
 ** trace callback:
 ** Params: database, callback function, userdata
@@ -2018,6 +2046,7 @@ static const luaL_Reg dblib[] = {
     {"create_function",     db_create_function      },
     {"create_aggregate",    db_create_aggregate     },
     {"create_collation",    db_create_collation     },
+    {"load_extension",      db_load_extension       },
 
     {"trace",               db_trace                },
     {"progress_handler",    db_progress_handler     },
