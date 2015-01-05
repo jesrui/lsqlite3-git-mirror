@@ -34,7 +34,8 @@ local sqlite3 = require "lsqlite3"
 
 local os = os
 
-local lunit = require "lunitx"
+--local lunit = require "lunitx"
+local lunit = require "lunit"
 
 local tests_sqlite3
 
@@ -60,7 +61,6 @@ function lunit_TestCase (name)
    return lunit.module(name,'seeall')
 end
 
-
 -------------------------------
 -- Basic open and close test --
 -------------------------------
@@ -76,8 +76,6 @@ lunit_wrap("open", function()
   assert( db:close() )
   os.remove(filename)
 end)
-
-
 
 -------------------------------------
 -- Presence of db member functions --
@@ -109,7 +107,6 @@ function db_funcs.test()
   assert_function( db.changes )
   assert_function( db.total_changes )
 end
-
 
 
 ---------------------------------------
@@ -839,6 +836,41 @@ end
 --------------------------------------------
 
 
+----------------------------------------------------
+-- Test garbage collected db with live statements --
+----------------------------------------------------
+
+gco = lunit_TestCase("Bug-Report: GC'd db with live prepared statements")
+
+function gco.setup()
+  gco.db = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, gco.db:exec("CREATE TABLE test (id, name)") )
+  assert_equal( sqlite3.OK, gco.db:exec("INSERT INTO test VALUES (1, 'Hello World')") )
+  assert_equal( sqlite3.OK, gco.db:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
+  assert_equal( sqlite3.OK, gco.db:exec("INSERT INTO test VALUES (3, 'Hello sqlite3')") )
+end
+
+-- gco.db:close()
+function gco.test_gc()
+  local stmt = assert_userdata( gco.db:prepare("INSERT INTO test VALUES (?, ?)")  )
+  assert_number( stmt:bind_values(4, "Good morning") )
+  assert_number( stmt:step() )
+  assert_number( stmt:reset() )
+  --st.check_content{ "Hello World", "Hello Lua", "Hello sqlite3", "Good morning" }
+  gco.db = nil -- reap the db if unreferenced from stmt
+  collectgarbage()
+  assert_number( stmt:bind_values(5, "Foo Bar") )
+  assert_number( stmt:step() )
+  assert_number( stmt:reset() )
+  --st.check_content{ "Hello World", "Hello Lua", "Hello sqlite3", "Good morning", "Foo Bar" }
+  assert_number( stmt:finalize() )
+end
+
+function gco.teardown()
+  assert_true( (gco.db == nil) or (gco.db:close() == sqlite3.OK) )
+end
+
+
 
 ----------------------------
 -- Test for bugs reported --
@@ -936,4 +968,6 @@ function colla.test()
     end
     assert_equal (n, 3)
 end
+
+lunit.main(arg)
 

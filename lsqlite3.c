@@ -1,6 +1,6 @@
 /************************************************************************
 * lsqlite3                                                              *
-* Copyright (C) 2002-2013 Tiago Dionizio, Doug Currie                   *
+* Copyright (C) 2002-2015 Tiago Dionizio, Doug Currie                   *
 * All rights reserved.                                                  *
 * Author    : Tiago Dionizio <tiago.dionizio@ist.utl.pt>                *
 * Author    : Doug Currie <doug.currie@alum.mit.edu>                    *
@@ -64,8 +64,6 @@
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK)
     #define LSQLITE_OMIT_UPDATE_HOOK 0
 #endif
-
-// #define LSQLITE_USE_LEGACY_PREPARE 1
 
 
 typedef struct sdb sdb;
@@ -193,7 +191,7 @@ struct sdb_vm {
     char temp;              /* temporary vm used in db:rows */
 };
 
-/* called with sql text on the lua stack */
+/* called with db,sql text on the lua stack */
 static sdb_vm *newvm(lua_State *L, sdb *db) {
     sdb_vm *svm = (sdb_vm*)lua_newuserdata(L, sizeof(sdb_vm));
 
@@ -206,15 +204,11 @@ static sdb_vm *newvm(lua_State *L, sdb *db) {
     svm->vm = NULL;
     svm->temp = 0;
 
-    /* add an entry on the database table: svm -> sql text (legacy) OR svm -> true */
+    /* add an entry on the database table: svm -> db to keep db live while svm is live */
     lua_pushlightuserdata(L, db);
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushlightuserdata(L, svm);
-#ifdef LSQLITE_USE_LEGACY_PREPARE
-    lua_pushvalue(L, -4); /* the sql text */
-#else
-    lua_pushboolean(L, 1);
-#endif
+    lua_pushvalue(L, -5); /* the db for this vm */
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
@@ -242,41 +236,7 @@ static int cleanupvm(lua_State *L, sdb_vm *svm) {
 }
 
 static int stepvm(lua_State *L, sdb_vm *svm) {
-    int result;
-#ifdef LSQLITE_USE_LEGACY_PREPARE
-    int loop_limit = 3;
-    while ( loop_limit-- ) {
-        result = sqlite3_step(svm->vm);
-        if ( result==SQLITE_ERROR ) {
-          result = sqlite3_reset (svm->vm);
-        }
-        if ( result==SQLITE_SCHEMA ) {
-            sqlite3_stmt *vn;
-            const char *sql;
-            /* recover sql text */
-            lua_pushlightuserdata(L, svm->db);
-            lua_rawget(L, LUA_REGISTRYINDEX);
-            lua_pushlightuserdata(L, svm);
-            lua_rawget(L, -2); /* sql text */
-            sql = luaL_checkstring(L, -1);
-            /* re-prepare */
-            result = sqlite3_prepare(svm->db->db, sql, -1, &vn, NULL);
-            if (result != SQLITE_OK) break;
-            sqlite3_transfer_bindings(svm->vm, vn);
-            sqlite3_finalize(svm->vm);
-            svm->vm = vn;
-            lua_pop(L,2);
-        } else {
-          break;
-        }
-    }
-#else
-    result = sqlite3_step(svm->vm);
-//    if ( result==SQLITE_ERROR ) {
-//        sqlite3_reset (svm->vm);
-//    }
-#endif
-    return result;
+    return sqlite3_step(svm->vm);
 }
 
 static sdb_vm *lsqlite_getvm(lua_State *L, int index) {
@@ -1715,18 +1675,9 @@ static int db_prepare(lua_State *L) {
     int sql_len = lua_strlen(L, 2);
     const char *sqltail;
     sdb_vm *svm;
-    lua_settop(L,2); /* sql is on top of stack for call to newvm */
+    lua_settop(L,2); /* db,sql is on top of stack for call to newvm */
     svm = newvm(L, db);
 
-#ifdef LSQLITE_USE_LEGACY_PREPARE
-    if (sqlite3_prepare(db->db, sql, sql_len, &svm->vm, &sqltail) != SQLITE_OK) {
-        cleanupvm(L, svm);
-
-        lua_pushnil(L);
-        lua_pushinteger(L, sqlite3_errcode(db->db));
-        return 2;
-    }
-#else
     if (sqlite3_prepare_v2(db->db, sql, sql_len, &svm->vm, &sqltail) != SQLITE_OK) {
         lua_pushnil(L);
         lua_pushinteger(L, sqlite3_errcode(db->db));
@@ -1734,7 +1685,6 @@ static int db_prepare(lua_State *L) {
             lua_pop(L, 1); // this should not happen since sqlite3_prepare_v2 will not set ->vm on error
         return 2;
     }
-#endif
 
     /* vm already in the stack */
     lua_pushstring(L, sqltail);
@@ -1833,25 +1783,16 @@ static int db_do_rows(lua_State *L, int(*f)(lua_State *)) {
     sdb *db = lsqlite_checkdb(L, 1);
     const char *sql = luaL_checkstring(L, 2);
     sdb_vm *svm;
-    lua_settop(L,2); /* sql is on top of stack for call to newvm */
+    lua_settop(L,2); /* db,sql is on top of stack for call to newvm */
     svm = newvm(L, db);
     svm->temp = 1;
 
-#ifdef LSQLITE_USE_LEGACY_PREPARE
-    if (sqlite3_prepare(db->db, sql, -1, &svm->vm, NULL) != SQLITE_OK) {
-        cleanupvm(L, svm);
-
-        lua_pushstring(L, sqlite3_errmsg(svm->db->db));
-        lua_error(L);
-    }
-#else
     if (sqlite3_prepare_v2(db->db, sql, -1, &svm->vm, NULL) != SQLITE_OK) {
         lua_pushstring(L, sqlite3_errmsg(svm->db->db));
         if (cleanupvm(L, svm) == 1)
             lua_pop(L, 1); // this should not happen since sqlite3_prepare_v2 will not set ->vm on error
         lua_error(L);
     }
-#endif
 
     lua_pushcfunction(L, f);
     lua_insert(L, -2);
