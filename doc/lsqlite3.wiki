@@ -77,7 +77,8 @@
 		<li><a href="#stmt_reset">stmt:reset</a></li>
 		<li><a href="#stmt_rows">stmt:rows</a></li>
 		<li><a href="#stmt_step">stmt:step</a></li>
-		<li><a href="#stmt_urows">stmt:urows</a></li>
+        <li><a href="#stmt_urows">stmt:urows</a></li>
+        <li><a href="#stmt_last_insert_rowid">stmt:last_insert_rowid</a></li>
 	</ul>
 
 	<li><a href="#methods_for_callback_contexts">Methods for callback contexts</a></li>
@@ -109,7 +110,7 @@
 </p>
 <hr />
 <h1><a name="name">NAME</a></h1>
-<p><strong>LuaSQLite 3</strong> - a Lua 5.1 and Lua 5.2 wrapper for the SQLite3 library</p>
+<p><strong>LuaSQLite 3</strong> - a Lua 5.1 to 5.3 wrapper for the SQLite3 library</p>
 <p>
 </p>
 <hr />
@@ -158,7 +159,7 @@ an enhanced version of Michael Roth's <code>lunit</code> called <code>lunitx</co
 tests were also derived from Michael's <strong>lua-sqlite3</strong> module, and more unit tests 
 added by Doug Currie. Get <code>lunitx</code> using Luarocks.</p>
 <p>The distribution also contains some functional tests by Tiago.</p>
-<p>This version of <code>lsqlite3</code> was tested with SQLite 3.7.16.1.</p>
+<p>This version of <code>lsqlite3</code> was tested with SQLite 3.8.7.4.</p>
 <p>
 </p>
 <hr />
@@ -613,8 +614,11 @@ methods.</p>
 <pre>
         stmt:bind(n[,value])</pre>
 <p>Binds value to statement parameter <code>n</code>. If the type of value is string 
-or number, it is bound as text or double, respectively. If <code>value</code> is a
-boolean or nil or missing, any previous binding is removed. The function
+it is bound as text. If the type of value is number, then with Lua prior to 5.3 
+it is bound as a double, with Lua 5.3 it is bound as an integer or double
+depending on its subtype using <code>lua_isinteger</code>. If <code>value</code> is a
+boolean then it is bound as 0 for <code>false</code> or 1 for <code>true</code>.
+If <code>value</code> is nil or missing, any previous binding is removed. The function
 returns <code>sqlite3.OK</code> on success or else a numerical error code (see
 <a href="#numerical_error_and_result_codes">Numerical error and result codes</a>).</p>
 <p>
@@ -852,6 +856,14 @@ statement stmt. Each iteration returns the values for the current row.
 This is the prepared statement equivalent of <a href="#db_urows"><code>db:urows()</code></a>.</p>
 <p>
 </p>
+<h2><a name="stmt_last_insert_rowid">stmt:last_insert_rowid</a></h2>
+<pre>
+        stmt:last_insert_rowid()</pre>
+<p>This function returns the rowid of the most recent INSERT into the
+database corresponding to this statement. 
+See <a href="#db_last_insert_rowid"><code>db:last_insert_rowid()</code></a>.</p>
+<p>
+</p>
 <hr />
 <h1><a name="methods_for_callback_contexts">Methods for callback contexts</a></h1>
 <p>A callback context is available as a parameter inside the callback
@@ -965,7 +977,7 @@ documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This is <code>lsqlite3</code> version <code>fsl_9</code>, also known as &quot;devel-0.9&quot;.</p>
+<p>This is <code>lsqlite3</code> version <code>fsl_9u</code>, also known as &quot;devel-0.9.2-1&quot;.</p>
 <p>
 </p>
 <hr />
@@ -982,7 +994,7 @@ making it available.</p>
 <pre>
     /************************************************************************
     * lsqlite3                                                              *
-    * Copyright (C) 2002-2013 Tiago Dionizio, Doug Currie                   *
+    * Copyright (C) 2002-2015 Tiago Dionizio, Doug Currie                   *
     * All rights reserved.                                                  *
     * Author    : Tiago Dionizio &lt;tiago.dionizio@ist.utl.pt&gt;                *
     * Author    : Doug Currie &lt;doug.currie@alum.mit.edu&gt;                    *
