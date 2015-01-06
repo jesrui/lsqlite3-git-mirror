@@ -39,6 +39,7 @@
 		<li><a href="#db_interrupt">db:interrupt</a></li>
 		<li><a href="#db_isopen">db:isopen</a></li>
 		<li><a href="#db_last_insert_rowid">db:last_insert_rowid</a></li>
+		<li><a href="#db_load_extension">db:load_extension</a></li>
 		<li><a href="#db_nrows">db:nrows</a></li>
 		<li><a href="#db_prepare">db:prepare</a></li>
 		<li><a href="#db_progress_handler">db:progress_handler</a></li>
@@ -73,12 +74,12 @@
 		<li><a href="#stmt_get_value">stmt:get_value</a></li>
 		<li><a href="#stmt_get_values">stmt:get_values</a></li>
 		<li><a href="#stmt_isopen">stmt:isopen</a></li>
+        <li><a href="#stmt_last_insert_rowid">stmt:last_insert_rowid</a></li>
 		<li><a href="#stmt_nrows">stmt:nrows</a></li>
 		<li><a href="#stmt_reset">stmt:reset</a></li>
 		<li><a href="#stmt_rows">stmt:rows</a></li>
 		<li><a href="#stmt_step">stmt:step</a></li>
         <li><a href="#stmt_urows">stmt:urows</a></li>
-        <li><a href="#stmt_last_insert_rowid">stmt:last_insert_rowid</a></li>
 	</ul>
 
 	<li><a href="#methods_for_callback_contexts">Methods for callback contexts</a></li>
@@ -373,6 +374,22 @@ number of parameters as given in nargs. Here is an example:</p>
         for col1,col2,col3,sum in db:urows('SELECT *,sum_cols(col1,col2,col3) FROM test') do
           util.printf('%2i+%2i+%2i=%2i\n',col1,col2,col3,sum)
         end</pre>
+<p>
+</p>
+<h2><a name="db_load_extension">db:load_extension</a></h2>
+<pre>
+        db:load_extension([name,[entrypoint]])</pre>
+
+<p>When a <code>name</code> is provided, loads an SQLite extension library from the 
+named file into this database connection. The optional <code>entrypoint</code> is the 
+library initialization function name; if not supplied, SQLite tries various default 
+entrypoint names. Returns <code>true</code> when successful, or <code>false</code> and 
+an error string otherwise.
+</p>
+<p>When called with no arguments, disables the load_extension() SQL function, which is 
+enabled as a side effect of calling <code>db:load_extension</code> with a 
+<code>name</code>.
+</p>
 <p>
 </p>
 <h2><a name="db_errcode">db:errcode</a></h2>
