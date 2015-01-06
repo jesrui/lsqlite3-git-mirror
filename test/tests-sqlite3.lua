@@ -871,6 +871,39 @@ function gco.teardown()
 end
 
 
+if _VERSION >= 'Lua 5.3' then
+
+l53 = lunit_TestCase("Lua 5.3 integers")
+
+function l53.setup()
+  l53.db = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, l53.db:exec("CREATE TABLE test (id, val)") )
+  assert_equal( sqlite3.OK, l53.db:exec("INSERT INTO test VALUES (1, 0x12345678abcdef09)") )
+  assert_equal( sqlite3.OK, l53.db:exec("INSERT INTO test VALUES (2, 5.1234567890123456)") )
+  assert_equal( sqlite3.OK, l53.db:exec("INSERT INTO test VALUES (3, 42)") )
+end
+
+-- l53.db:close()
+function l53.test_intfloat()
+    local db = l53.db
+    for row in db:nrows("SELECT val FROM test WHERE id = 1") do
+      assert_equal (row.val, 0x12345678abcdef09)
+      assert_equal (row.val & 0xffffffff, 0xabcdef09)
+      assert_equal (row.val >> 32, 0x12345678)
+    end
+    for row in db:nrows("SELECT val FROM test WHERE id = 2") do
+      assert_equal (row.val, 5.1234567890123456)
+    end
+    for row in db:nrows("SELECT val FROM test WHERE id = 3") do
+      assert_equal (row.val, 42)
+    end
+end
+
+function l53.teardown()
+  assert_true( (l53.db == nil) or (l53.db:close() == sqlite3.OK) )
+end
+
+end
 
 ----------------------------
 -- Test for bugs reported --

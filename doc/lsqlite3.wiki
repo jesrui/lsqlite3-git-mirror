@@ -15,6 +15,7 @@
 	<ul>
 
 		<li><a href="#sqlite3_complete">sqlite3.complete</a></li>
+        <li><a href="#sqlite3_lversion">sqlite3.lversion</a></li>
 		<li><a href="#sqlite3_open">sqlite3.open</a></li>
 		<li><a href="#sqlite3_open_memory">sqlite3.open_memory</a></li>
 		<li><a href="#sqlite3_temp_directory">sqlite3.temp_directory</a></li>
@@ -215,6 +216,12 @@ the function simply returns the current temporary directory.</p>
 <pre>
         sqlite3.version()</pre>
 <p>Returns a string with SQLite version information, in the form 'x.y[.z]'.</p>
+<p>
+</p>
+<h2><a name="sqlite3_lversion">sqlite3.lversion</a></h2>
+<pre>
+        sqlite3.lversion()</pre>
+<p>Returns a string with lsqlite3 library version information, in the form 'x.y[.z]'.</p>
 <p>
 </p>
 <hr />
