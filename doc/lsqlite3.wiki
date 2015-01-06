@@ -215,7 +215,7 @@ the function simply returns the current temporary directory.</p>
 <h2><a name="sqlite3_version">sqlite3.version</a></h2>
 <pre>
         sqlite3.version()</pre>
-<p>Returns a string with SQLite version information, in the form 'x.y[.z]'.</p>
+<p>Returns a string with SQLite version information, in the form 'x.y[.z[.p]]'.</p>
 <p>
 </p>
 <h2><a name="sqlite3_lversion">sqlite3.lversion</a></h2>
@@ -1001,7 +1001,7 @@ documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</
 </p>
 <hr />
 <h1><a name="version">VERSION</a></h1>
-<p>This is <code>lsqlite3</code> version <code>fsl_9u</code>, also known as &quot;devel-0.9.2-1&quot;.</p>
+<p>This is <code>lsqlite3</code> version &quot;0.9.3&quot;, also tagged as <code>fsl_9w</code>.</p>
 <p>
 </p>
 <hr />
