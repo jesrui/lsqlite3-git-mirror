@@ -1,8 +1,8 @@
 package = "lsqlite3"
-version = "0.9.2-2"
+version = "0.9.3-0"
 source = {
-    url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09v.zip?uuid=fsl_9v",
-    file = "lsqlite3_fsl09v.zip"
+    url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09w.zip?uuid=fsl_9w",
+    file = "lsqlite3_fsl09w.zip"
 }
 description = {
     summary = "A binding for Lua to the SQLite3 database library",
@@ -29,6 +29,7 @@ build = {
     modules = {
         lsqlite3 = {
             sources = { "lsqlite3.c" },
+            defines = {'LSQLITE_VERSION="0.9.3"'},
             libraries = { "sqlite3" },
             incdirs = { "$(SQLITE_INCDIR)" },
             libdirs = { "$(SQLITE_LIBDIR)" }

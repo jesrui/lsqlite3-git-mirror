@@ -35,23 +35,22 @@
 #include "lauxlib.h"
 
 #if LUA_VERSION_NUM > 501
-//
-// Lua 5.2
-//
+/*
+** Lua 5.2
+*/
 #define lua_strlen lua_rawlen
-// luaL_typerror always used with arg at ndx == NULL
+/* luaL_typerror always used with arg at ndx == NULL */
 #define luaL_typerror(L,ndx,str) luaL_error(L,"bad argument %d (%s expected, got nil)",ndx,str)
-// luaL_register used once, so below expansion is OK for this case
+/* luaL_register used once, so below expansion is OK for this case */
 #define luaL_register(L,name,reg) lua_newtable(L);luaL_setfuncs(L,reg,0)
-// luaL_openlib always used with name == NULL
+/* luaL_openlib always used with name == NULL */
 #define luaL_openlib(L,name,reg,nup) luaL_setfuncs(L,reg,nup)
-//
+
 #if LUA_VERSION_NUM > 502
-//
-// Lua 5.3
-//
+/*
+** Lua 5.3
+*/
 #define luaL_checkint(L,n)  ((int)luaL_checkinteger(L, (n)))
-//
 #endif
 #endif
 
@@ -1710,7 +1709,7 @@ static int db_prepare(lua_State *L) {
         lua_pushnil(L);
         lua_pushinteger(L, sqlite3_errcode(db->db));
         if (cleanupvm(L, svm) == 1)
-            lua_pop(L, 1); // this should not happen since sqlite3_prepare_v2 will not set ->vm on error
+            lua_pop(L, 1); /* this should not happen since sqlite3_prepare_v2 will not set ->vm on error */
         return 2;
     }
 
@@ -1818,7 +1817,7 @@ static int db_do_rows(lua_State *L, int(*f)(lua_State *)) {
     if (sqlite3_prepare_v2(db->db, sql, -1, &svm->vm, NULL) != SQLITE_OK) {
         lua_pushstring(L, sqlite3_errmsg(svm->db->db));
         if (cleanupvm(L, svm) == 1)
-            lua_pop(L, 1); // this should not happen since sqlite3_prepare_v2 will not set ->vm on error
+            lua_pop(L, 1); /* this should not happen since sqlite3_prepare_v2 will not set ->vm on error */
         lua_error(L);
     }
 
@@ -1961,6 +1960,18 @@ static int lsqlite_newindex(lua_State *L) {
     lua_pushliteral(L, "attempt to change readonly table");
     lua_error(L);
     return 0;
+}
+
+#ifndef LSQLITE_VERSION
+/* should be defined in rockspec, but just in case... */
+#define LSQLITE_VERSION "unknown"
+#endif
+
+/* Version number of this library
+*/
+static int lsqlite_lversion(lua_State *L) {
+    lua_pushstring(L, LSQLITE_VERSION);
+    return 1;
 }
 
 /*
@@ -2143,6 +2154,7 @@ static const luaL_Reg ctxlib[] = {
 };
 
 static const luaL_Reg sqlitelib[] = {
+    {"lversion",        lsqlite_lversion        },
     {"version",         lsqlite_version         },
     {"complete",        lsqlite_complete        },
 #ifndef WIN32
