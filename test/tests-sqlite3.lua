@@ -873,6 +873,10 @@ end
 
 if _VERSION >= 'Lua 5.3' then
 
+-- this hack is avoid syntax errors in Lua < 5.3
+local bitand = (load "return function (x, y) return x & y end")()
+local bitshr = (load "return function (x, y) return x >> y end")()
+
 l53 = lunit_TestCase("Lua 5.3 integers")
 
 function l53.setup()
@@ -888,8 +892,8 @@ function l53.test_intfloat()
     local db = l53.db
     for row in db:nrows("SELECT val FROM test WHERE id = 1") do
       assert_equal (row.val, 0x12345678abcdef09)
-      assert_equal (row.val & 0xffffffff, 0xabcdef09)
-      assert_equal (row.val >> 32, 0x12345678)
+      assert_equal (bitand(row.val, 0xffffffff), 0xabcdef09)
+      assert_equal (bitshr(row.val, 32), 0x12345678)
     end
     for row in db:nrows("SELECT val FROM test WHERE id = 2") do
       assert_equal (row.val, 5.1234567890123456)
