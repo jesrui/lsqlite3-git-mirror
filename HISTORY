@@ -1,3 +1,15 @@
+2016-November-??
+
+Version "0.9.4"
+
+Since the "0.9.3-devel" release of this Lua library...
+
+Added unit tests for NULs in BLOBs and TEXT columns. (Refute defect report.)
+
+Use lua_createtable() in lieu of lua_newtable() when number of table elements is know.
+This will improve performance.
+Thanks to Egil Hjelmeland for the suggestion.
+
 2015-January-06
 
 Version "0.9.3"

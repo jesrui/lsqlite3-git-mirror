@@ -373,7 +373,7 @@ static int dbvm_get_values(lua_State *L) {
     int n;
     dbvm_check_contents(L, svm);
 
-    lua_newtable(L);
+    lua_createtable(L, columns, 0);
     for (n = 0; n < columns;) {
         vm_push_column(L, vm, n++);
         lua_rawseti(L, -2, n);
@@ -387,7 +387,7 @@ static int dbvm_get_names(lua_State *L) {
     int columns = sqlite3_column_count(vm); /* valid as soon as statement prepared */
     int n;
 
-    lua_newtable(L);
+    lua_createtable(L, columns, 0);
     for (n = 0; n < columns;) {
         lua_pushstring(L, sqlite3_column_name(vm, n++));
         lua_rawseti(L, -2, n);
@@ -401,7 +401,7 @@ static int dbvm_get_types(lua_State *L) {
     int columns = sqlite3_column_count(vm); /* valid as soon as statement prepared */
     int n;
 
-    lua_newtable(L);
+    lua_createtable(L, columns, 0);
     for (n = 0; n < columns;) {
         lua_pushstring(L, sqlite3_column_decltype(vm, n++));
         lua_rawseti(L, -2, n);
@@ -453,7 +453,7 @@ static int dbvm_get_named_values(lua_State *L) {
     int n;
     dbvm_check_contents(L, svm);
 
-    lua_newtable(L);
+    lua_createtable(L, 0, columns);
     for (n = 0; n < columns; ++n) {
         lua_pushstring(L, sqlite3_column_name(vm, n));
         vm_push_column(L, vm, n);
@@ -468,7 +468,7 @@ static int dbvm_get_named_types(lua_State *L) {
     int columns = sqlite3_column_count(vm);
     int n;
 
-    lua_newtable(L);
+    lua_createtable(L, 0, columns);
     for (n = 0; n < columns; ++n) {
         lua_pushstring(L, sqlite3_column_name(vm, n));
         lua_pushstring(L, sqlite3_column_decltype(vm, n));
@@ -1639,7 +1639,7 @@ static int db_exec_callback(void* user, int columns, char **data, char **names) 
     lua_pushvalue(L, 5);
     if (lua_isnil(L, -1)) {
         lua_pop(L, 1);
-        lua_newtable(L);
+        lua_createtable(L, columns, 0);
         lua_pushvalue(L, -1);
         lua_replace(L, 5);
         for (n = 0; n < columns;) {
@@ -1732,14 +1732,15 @@ static int db_do_next_row(lua_State *L, int packed) {
 
     if (result == SQLITE_ROW) {
         if (packed) {
-            lua_newtable(L);
             if (packed == 1) {
+                lua_createtable(L, columns, 0);
                 for (i = 0; i < columns;) {
                     vm_push_column(L, vm, i);
                     lua_rawseti(L, -2, ++i);
                 }
             }
             else {
+                lua_createtable(L, 0, columns);
                 for (i = 0; i < columns; ++i) {
                     lua_pushstring(L, sqlite3_column_name(vm, i));
                     vm_push_column(L, vm, i);
