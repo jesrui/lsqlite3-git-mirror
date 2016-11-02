@@ -1006,5 +1006,67 @@ function colla.test()
     assert_equal (n, 3)
 end
 
+--------------------------------------
+-- Tests for NULs in BLOBs and TEXT --
+--------------------------------------
+
+local db_blobNULs = lunit_TestCase("Blob NULs")
+
+function db_blobNULs.setup()
+  db_blobNULs.db = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, db_blobNULs.db:exec("CREATE TABLE test (id, name blob)") )
+  assert_equal( sqlite3.OK, db_blobNULs.db:exec("INSERT INTO test VALUES (1, CAST('Hello' || x'00' || 'World' || x'00' AS BLOB))") )
+  assert_equal( sqlite3.OK, db_blobNULs.db:exec("INSERT INTO test VALUES (2, CAST('Hello' || x'00' || 'Lua' || x'00' AS BLOB))") )
+  assert_equal( sqlite3.OK, db_blobNULs.db:exec("INSERT INTO test VALUES (3, CAST('Hello' || x'00' || 'SQLite' || x'00' AS BLOB))") )
+end
+
+function db_blobNULs.teardown()
+  assert( db_blobNULs.db:close() )
+end
+
+function db_blobNULs.test()
+    local db = db_blobNULs.db
+    for row in db:nrows("SELECT id as val FROM test WHERE name=CAST('Hello' || x'00' || 'World' || x'00' AS BLOB)") do
+      assert_equal (row.val, 1)
+    end
+    for row in db:nrows("SELECT substr(name,7,4) as val FROM test WHERE id = 2") do
+      assert_equal (row.val,'Lua\0')
+      assert_equal (#row.val, 4)
+    end
+    for row in db:nrows("SELECT name as val FROM test WHERE id = 3") do
+      assert_equal (row.val, 'Hello\0SQLite\0')
+      assert_equal (#row.val, 13)
+    end
+end
+
+local db_textNULs = lunit_TestCase("Text NULs")
+
+function db_textNULs.setup()
+  db_textNULs.db = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, db_textNULs.db:exec("CREATE TABLE test (id, name text)") )
+  assert_equal( sqlite3.OK, db_textNULs.db:exec("INSERT INTO test VALUES (1, CAST('Hello' || x'00' || 'World' || x'00' AS TEXT))") )
+  assert_equal( sqlite3.OK, db_textNULs.db:exec("INSERT INTO test VALUES (2, CAST('Hello' || x'00' || 'Lua' || x'00' AS TEXT))") )
+  assert_equal( sqlite3.OK, db_textNULs.db:exec("INSERT INTO test VALUES (3, CAST('Hello' || x'00' || 'SQLite' || x'00' AS TEXT))") )
+end
+
+function db_textNULs.teardown()
+  assert( db_textNULs.db:close() )
+end
+
+function db_textNULs.test()
+    local db = db_textNULs.db
+    for row in db:nrows("SELECT id as val FROM test WHERE name=CAST('Hello' || x'00' || 'World' || x'00' AS TEXT)") do
+      assert_equal (row.val, 1)
+    end
+    for row in db:nrows("SELECT substr(CAST(name AS BLOB),7,4) as val FROM test WHERE id = 2") do
+      assert_equal (row.val,'Lua\0')
+      assert_equal (#row.val, 4)
+    end
+    for row in db:nrows("SELECT name as val FROM test WHERE id = 3") do
+      assert_equal (row.val, 'Hello\0SQLite\0')
+      assert_equal (#row.val, 13)
+    end
+end
+
 lunit.main(arg)
 
