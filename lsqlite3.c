@@ -1,10 +1,10 @@
 /************************************************************************
 * lsqlite3                                                              *
-* Copyright (C) 2002-2015 Tiago Dionizio, Doug Currie                   *
+* Copyright (C) 2002-2016 Tiago Dionizio, Doug Currie                   *
 * All rights reserved.                                                  *
 * Author    : Tiago Dionizio <tiago.dionizio@ist.utl.pt>                *
 * Author    : Doug Currie <doug.currie@alum.mit.edu>                    *
-* Library   : lsqlite3 - a SQLite 3 database binding for Lua 5          *
+* Library   : lsqlite3 - an SQLite 3 database binding for Lua 5         *
 *                                                                       *
 * Permission is hereby granted, free of charge, to any person obtaining *
 * a copy of this software and associated documentation files (the       *
@@ -67,6 +67,7 @@
 
 typedef struct sdb sdb;
 typedef struct sdb_vm sdb_vm;
+typedef struct sdb_bu sdb_bu;
 typedef struct sdb_func sdb_func;
 
 /* to use as C user data so i know what function sqlite is calling */
@@ -118,6 +119,7 @@ struct sdb {
 
 static const char *sqlite_meta      = ":sqlite3";
 static const char *sqlite_vm_meta   = ":sqlite3:vm";
+static const char *sqlite_bu_meta   = ":sqlite3:bu";
 static const char *sqlite_ctx_meta  = ":sqlite3:ctx";
 static int sqlite_ctx_meta_ref;
 
@@ -192,7 +194,7 @@ struct sdb_vm {
 
 /* called with db,sql text on the lua stack */
 static sdb_vm *newvm(lua_State *L, sdb *db) {
-    sdb_vm *svm = (sdb_vm*)lua_newuserdata(L, sizeof(sdb_vm));
+    sdb_vm *svm = (sdb_vm*)lua_newuserdata(L, sizeof(sdb_vm)); /* db sql svm_ud -- */
 
     luaL_getmetatable(L, sqlite_vm_meta);
     lua_setmetatable(L, -2);        /* set metatable */
@@ -204,12 +206,12 @@ static sdb_vm *newvm(lua_State *L, sdb *db) {
     svm->temp = 0;
 
     /* add an entry on the database table: svm -> db to keep db live while svm is live */
-    lua_pushlightuserdata(L, db);
-    lua_rawget(L, LUA_REGISTRYINDEX);
-    lua_pushlightuserdata(L, svm);
-    lua_pushvalue(L, -5); /* the db for this vm */
-    lua_rawset(L, -3);
-    lua_pop(L, 1);
+    lua_pushlightuserdata(L, db);     /* db sql svm_ud db_lud -- */
+    lua_rawget(L, LUA_REGISTRYINDEX); /* db sql svm_ud reg[db_lud] -- */
+    lua_pushlightuserdata(L, svm);    /* db sql svm_ud reg[db_lud] svm_lud -- */
+    lua_pushvalue(L, -5);             /* db sql svm_ud reg[db_lud] svm_lud db -- */
+    lua_rawset(L, -3);                /* (reg[db_lud])[svm_lud] = db ; set the db for this vm */
+    lua_pop(L, 1);                    /* db sql svm_ud -- */
 
     return svm;
 }
@@ -1537,6 +1539,117 @@ static int db_progress_handler(lua_State *L) {
 
 #endif /* #if !defined(SQLITE_OMIT_PROGRESS_CALLBACK) || !SQLITE_OMIT_PROGRESS_CALLBACK */
 
+/* Online Backup API */
+#if 0
+sqlite3_backup *sqlite3_backup_init(
+  sqlite3 *pDest,                        /* Destination database handle */
+  const char *zDestName,                 /* Destination database name */
+  sqlite3 *pSource,                      /* Source database handle */
+  const char *zSourceName                /* Source database name */
+);
+int sqlite3_backup_step(sqlite3_backup *p, int nPage);
+int sqlite3_backup_finish(sqlite3_backup *p);
+int sqlite3_backup_remaining(sqlite3_backup *p);
+int sqlite3_backup_pagecount(sqlite3_backup *p);
+#endif
+
+struct sdb_bu {
+    sqlite3_backup *bu;     /* backup structure */
+};
+
+static int cleanupbu(lua_State *L, sdb_bu *sbu) {
+
+    if (!sbu->bu) return 0; /* already finished */
+
+    /* remove table from registry */
+    lua_pushlightuserdata(L, sbu->bu);
+    lua_pushnil(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+
+    lua_pushinteger(L, sqlite3_backup_finish(sbu->bu));
+    sbu->bu = NULL;
+
+    return 1;
+}
+
+static int lsqlite_backup_init(lua_State *L) {
+
+    sdb *target_db = lsqlite_checkdb(L, 1);
+    const char *target_nm = luaL_checkstring(L, 2);
+    sdb *source_db = lsqlite_checkdb(L, 3);
+    const char *source_nm = luaL_checkstring(L, 4);
+
+    sqlite3_backup *bu = sqlite3_backup_init(target_db->db, target_nm, source_db->db, source_nm);
+
+    sdb_bu *sbu = (sdb_bu*)lua_newuserdata(L, sizeof(sdb_bu));
+
+    luaL_getmetatable(L, sqlite_bu_meta);
+    lua_setmetatable(L, -2);        /* set metatable */
+    sbu->bu = bu;
+
+    /* create table from registry */
+    /* to prevent referenced databases from being garbage collected while bu is live */
+    lua_pushlightuserdata(L, bu);
+    lua_createtable(L, 2, 0);
+    /* add source and target dbs to table at indices 1 and 2 */
+    lua_pushvalue(L, 1); /* target db */
+    lua_rawseti(L, -2, 1);
+    lua_pushvalue(L, 3); /* source db */
+    lua_rawseti(L, -2, 2);
+    /* put table in registry with key lightuserdata bu */
+    lua_rawset(L, LUA_REGISTRYINDEX);
+
+    return 1;
+}
+
+static sdb_bu *lsqlite_getbu(lua_State *L, int index) {
+    sdb_bu *sbu = (sdb_bu*)luaL_checkudata(L, index, sqlite_bu_meta);
+    if (sbu == NULL) luaL_typerror(L, index, "sqlite database backup");
+    return sbu;
+}
+
+static sdb_bu *lsqlite_checkbu(lua_State *L, int index) {
+    sdb_bu *sbu = lsqlite_getbu(L, index);
+    if (sbu->bu == NULL) luaL_argerror(L, index, "attempt to use closed sqlite database backup");
+    return sbu;
+}
+
+static int dbbu_gc(lua_State *L) {
+    sdb_bu *sbu = lsqlite_getbu(L, 1);
+    if (sbu->bu != NULL) {
+        cleanupbu(L, sbu);
+        lua_pop(L, 1);
+    }
+    /* else ignore if already finished */
+    return 0;
+}
+
+static int dbbu_step(lua_State *L) {
+    sdb_bu *sbu = lsqlite_checkbu(L, 1);
+    int nPage = luaL_checkint(L, 2);
+    lua_pushinteger(L, sqlite3_backup_step(sbu->bu, nPage));
+    return 1;
+}
+
+static int dbbu_remaining(lua_State *L) {
+    sdb_bu *sbu = lsqlite_checkbu(L, 1);
+    lua_pushinteger(L, sqlite3_backup_remaining(sbu->bu));
+    return 1;
+}
+
+static int dbbu_pagecount(lua_State *L) {
+    sdb_bu *sbu = lsqlite_checkbu(L, 1);
+    lua_pushinteger(L, sqlite3_backup_pagecount(sbu->bu));
+    return 1;
+}
+
+static int dbbu_finish(lua_State *L) {
+    sdb_bu *sbu = lsqlite_checkbu(L, 1);
+    return cleanupbu(L, sbu);
+}
+
+/* end of Online Backup API */
+
 /*
 ** busy handler:
 ** Params: database, callback function, userdata
@@ -2154,6 +2267,18 @@ static const luaL_Reg ctxlib[] = {
     {NULL, NULL}
 };
 
+static const luaL_Reg dbbulib[] = {
+
+    {"step",        dbbu_step       },
+    {"remaining",   dbbu_remaining  },
+    {"pagecount",   dbbu_pagecount  },
+    {"finish",      dbbu_finish     },
+
+//  {"__tostring",  dbbu_tostring   },
+    {"__gc",        dbbu_gc         },
+    {NULL, NULL}
+};
+
 static const luaL_Reg sqlitelib[] = {
     {"lversion",        lsqlite_lversion        },
     {"version",         lsqlite_version         },
@@ -2163,6 +2288,8 @@ static const luaL_Reg sqlitelib[] = {
 #endif
     {"open",            lsqlite_open            },
     {"open_memory",     lsqlite_open_memory     },
+
+    {"backup_init",     lsqlite_backup_init     },
 
     {"__newindex",      lsqlite_newindex        },
     {NULL, NULL}
@@ -2184,6 +2311,7 @@ static void create_meta(lua_State *L, const char *name, const luaL_Reg *lib) {
 LUALIB_API int luaopen_lsqlite3(lua_State *L) {
     create_meta(L, sqlite_meta, dblib);
     create_meta(L, sqlite_vm_meta, vmlib);
+    create_meta(L, sqlite_bu_meta, dbbulib);
     create_meta(L, sqlite_ctx_meta, ctxlib);
 
     luaL_getmetatable(L, sqlite_ctx_meta);

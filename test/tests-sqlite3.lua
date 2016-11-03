@@ -1068,5 +1068,67 @@ function db_textNULs.test()
     end
 end
 
+-------------------------------------
+--   Tests for Online Backup API   --
+-------------------------------------
+
+local db_bu = lunit_TestCase("Online Backup API")
+
+function db_bu.setup()
+  db_bu.db_src = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, db_bu.db_src:exec("CREATE TABLE test (id, name text)") )
+  assert_equal( sqlite3.OK, db_bu.db_src:exec("INSERT INTO test VALUES (1, 'Hello World')") )
+  assert_equal( sqlite3.OK, db_bu.db_src:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
+  assert_equal( sqlite3.OK, db_bu.db_src:exec("INSERT INTO test VALUES (3, 'Hello SQLite')") )
+  db_bu.filename = "/tmp/__lua-sqlite3-20161102233049." .. os.time()
+  db_bu.db_tgt = assert_userdata( sqlite3.open(db_bu.filename) )
+end
+
+function db_bu.teardown()
+  assert( db_bu.db_src:close() )
+  assert( db_bu.db_tgt:close() )
+  os.remove(db_bu.filename)
+end
+
+function db_bu.test()
+
+  assert_function( sqlite3.backup_init )
+
+  local bu = assert_userdata( sqlite3.backup_init(db_bu.db_tgt, 'main', db_bu.db_src, 'main') )
+
+  assert_function ( bu.step )
+  assert_function ( bu.remaining )
+  assert_function ( bu.pagecount )
+  assert_function ( bu.finish )
+
+  if true then
+    bu = nil
+    collectgarbage()
+    collectgarbage()
+  else
+    bu:finish()
+  end
+
+  bu = assert_userdata( sqlite3.backup_init(db_bu.db_tgt, 'main', db_bu.db_src, 'main') )
+
+  assert_equal( sqlite3.DONE, bu:step(-1) )
+  assert_equal( sqlite3.OK, bu:finish() )
+  bu = nil
+
+  local db = db_bu.db_tgt
+  for row in db:nrows("SELECT id as val FROM test WHERE name='Hello World'") do
+    assert_equal (row.val, 1)
+  end
+  for row in db:nrows("SELECT substr(name,7,3) as val FROM test WHERE id = 2") do
+    assert_equal (row.val,'Lua')
+    assert_equal (#row.val, 3)
+  end
+  for row in db:nrows("SELECT name as val FROM test WHERE id = 3") do
+    assert_equal (row.val, 'Hello SQLite')
+    assert_equal (#row.val, 12)
+  end
+
+end
+
 lunit.main(arg)
 
