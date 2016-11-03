@@ -1581,25 +1581,30 @@ static int lsqlite_backup_init(lua_State *L) {
 
     sqlite3_backup *bu = sqlite3_backup_init(target_db->db, target_nm, source_db->db, source_nm);
 
-    sdb_bu *sbu = (sdb_bu*)lua_newuserdata(L, sizeof(sdb_bu));
+    if (NULL != bu) {
+        sdb_bu *sbu = (sdb_bu*)lua_newuserdata(L, sizeof(sdb_bu));
 
-    luaL_getmetatable(L, sqlite_bu_meta);
-    lua_setmetatable(L, -2);        /* set metatable */
-    sbu->bu = bu;
+        luaL_getmetatable(L, sqlite_bu_meta);
+        lua_setmetatable(L, -2);        /* set metatable */
+        sbu->bu = bu;
 
-    /* create table from registry */
-    /* to prevent referenced databases from being garbage collected while bu is live */
-    lua_pushlightuserdata(L, bu);
-    lua_createtable(L, 2, 0);
-    /* add source and target dbs to table at indices 1 and 2 */
-    lua_pushvalue(L, 1); /* target db */
-    lua_rawseti(L, -2, 1);
-    lua_pushvalue(L, 3); /* source db */
-    lua_rawseti(L, -2, 2);
-    /* put table in registry with key lightuserdata bu */
-    lua_rawset(L, LUA_REGISTRYINDEX);
+        /* create table from registry */
+        /* to prevent referenced databases from being garbage collected while bu is live */
+        lua_pushlightuserdata(L, bu);
+        lua_createtable(L, 2, 0);
+        /* add source and target dbs to table at indices 1 and 2 */
+        lua_pushvalue(L, 1); /* target db */
+        lua_rawseti(L, -2, 1);
+        lua_pushvalue(L, 3); /* source db */
+        lua_rawseti(L, -2, 2);
+        /* put table in registry with key lightuserdata bu */
+        lua_rawset(L, LUA_REGISTRYINDEX);
 
-    return 1;
+        return 1;
+    }
+    else {
+        return 0;
+    }
 }
 
 static sdb_bu *lsqlite_getbu(lua_State *L, int index) {

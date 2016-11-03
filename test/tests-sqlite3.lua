@@ -1181,5 +1181,21 @@ function db_bu_gc.test()
 
 end
 
+local db_bu_null = lunit_TestCase("Online Backup API NULL")
+
+function db_bu_null.setup()
+  db_bu_null.db = assert( sqlite3.open_memory() )
+end
+
+function db_bu_null.teardown()
+  assert( db_bu_null.db:close() )
+end
+
+function db_bu_null.test()
+
+  local bu = assert_nil( sqlite3.backup_init(db_bu_null.db, 'main', db_bu_null.db, 'main') )
+
+end
+
 lunit.main(arg)
 
