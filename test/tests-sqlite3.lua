@@ -30,7 +30,7 @@
 -- Copyright (c) 2005-13 Doug Currie
 -- Same license as above
 
-local sqlite3 = require "lsqlite3"
+local sqlite3 = require(arg[1]) -- "lsqlite3complete" or "lsqlite3"
 
 local os = os
 
@@ -60,6 +60,13 @@ end
 function lunit_TestCase (name)
    return lunit.module(name,'seeall')
 end
+
+-------------------------------
+-- Print library versions    --
+-------------------------------
+
+print ("SQLite v", sqlite3.version())
+print ("lsqlite v", sqlite3.lversion())
 
 -------------------------------
 -- Basic open and close test --
@@ -1197,5 +1204,5 @@ function db_bu_null.test()
 
 end
 
-lunit.main(arg)
+lunit.main()
 

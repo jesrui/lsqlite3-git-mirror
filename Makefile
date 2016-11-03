@@ -13,6 +13,7 @@ install:
 
 test: 
 	$(LUAEXE) test/test.lua
-	$(LUAEXE) test/tests-sqlite3.lua
+	$(LUAEXE) test/tests-sqlite3.lua lsqlite3
+	$(LUAEXE) test/tests-sqlite3.lua lsqlite3complete
 
 .PHONY: all test install

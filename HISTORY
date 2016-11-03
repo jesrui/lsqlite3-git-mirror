@@ -4,9 +4,14 @@ Version "0.9.4"
 
 Since the "0.9.3-devel" release of this Lua library...
 
+Added second module 'lsqlite3complete' that statically links sqlite.c. Continue to use 
+'lsqlite3' for dynamic linking to 'sqlite3.so' or 'sqlite3.dll'.
+
+Added Online Backup API
+
 Added unit tests for NULs in BLOBs and TEXT columns. (Refute defect report.)
 
-Use lua_createtable() in lieu of lua_newtable() when number of table elements is know.
+Use lua_createtable() in lieu of lua_newtable() when number of table elements is known.
 This will improve performance.
 Thanks to Egil Hjelmeland for the suggestion.
 
