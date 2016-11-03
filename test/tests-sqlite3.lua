@@ -1130,5 +1130,56 @@ function db_bu.test()
 
 end
 
+local db_bu_gc = lunit_TestCase("Online Backup API GC")
+
+function db_bu_gc.setup()
+  db_bu_gc.db_src = assert( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, db_bu_gc.db_src:exec("CREATE TABLE test (id, name text)") )
+  assert_equal( sqlite3.OK, db_bu_gc.db_src:exec("INSERT INTO test VALUES (1, 'Hello World')") )
+  assert_equal( sqlite3.OK, db_bu_gc.db_src:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
+  assert_equal( sqlite3.OK, db_bu_gc.db_src:exec("INSERT INTO test VALUES (3, 'Hello SQLite')") )
+  db_bu_gc.filename = "/tmp/__lua-sqlite3-20161103120909." .. os.time()
+  db_bu_gc.db_tgt = assert_userdata( sqlite3.open(db_bu_gc.filename) )
+end
+
+function db_bu_gc.teardown()
+  os.remove(db_bu_gc.filename)
+end
+
+function db_bu_gc.test()
+
+  local bu = assert_userdata( sqlite3.backup_init(db_bu_gc.db_tgt, 'main', db_bu_gc.db_src, 'main') )
+
+  db_bu_gc.db_src = nil
+  db_bu_gc.db_tgt = nil
+
+  collectgarbage()
+  collectgarbage() -- should not close dbs even though db_bu_gc refs nil'd since they are referenced by bu
+
+  assert_equal( sqlite3.DONE, bu:step(-1) )
+  assert_equal( sqlite3.OK, bu:finish() )
+  bu = nil
+
+  collectgarbage()
+  collectgarbage() -- should now close dbs
+
+  local db = assert_userdata( sqlite3.open(db_bu_gc.filename) )
+
+  for row in db:nrows("SELECT id as val FROM test WHERE name='Hello World'") do
+    assert_equal (row.val, 1)
+  end
+  for row in db:nrows("SELECT substr(name,7,3) as val FROM test WHERE id = 2") do
+    assert_equal (row.val,'Lua')
+    assert_equal (#row.val, 3)
+  end
+  for row in db:nrows("SELECT name as val FROM test WHERE id = 3") do
+    assert_equal (row.val, 'Hello SQLite')
+    assert_equal (#row.val, 12)
+  end
+
+  assert( db:close() )
+
+end
+
 lunit.main(arg)
 
