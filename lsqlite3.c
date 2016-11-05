@@ -63,7 +63,11 @@
 #if !defined(LSQLITE_OMIT_UPDATE_HOOK)
     #define LSQLITE_OMIT_UPDATE_HOOK 0
 #endif
-
+#if defined(LSQLITE_OMIT_OPEN_V2)
+    #define SQLITE3_OPEN(L,filename,flags) sqlite3_open(L,filename)
+#else
+    #define SQLITE3_OPEN(L,filename,flags) sqlite3_open_v2(L,filename,flags,NULL)
+#endif
 
 typedef struct sdb sdb;
 typedef struct sdb_vm sdb_vm;
@@ -2046,10 +2050,10 @@ static int lsqlite_temp_directory(lua_State *L) {
 }
 #endif
 
-static int lsqlite_do_open(lua_State *L, const char *filename) {
+static int lsqlite_do_open(lua_State *L, const char *filename, int flags) {
     sdb *db = newdb(L); /* create and leave in stack */
 
-    if (sqlite3_open(filename, &db->db) == SQLITE_OK) {
+    if (SQLITE3_OPEN(filename, &db->db, flags) == SQLITE_OK) {
         /* database handle already in the stack - return it */
         return 1;
     }
@@ -2068,11 +2072,12 @@ static int lsqlite_do_open(lua_State *L, const char *filename) {
 
 static int lsqlite_open(lua_State *L) {
     const char *filename = luaL_checkstring(L, 1);
-    return lsqlite_do_open(L, filename);
+    int flags = luaL_optinteger(L, 2, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+    return lsqlite_do_open(L, filename, flags);
 }
 
 static int lsqlite_open_memory(lua_State *L) {
-    return lsqlite_do_open(L, ":memory:");
+    return lsqlite_do_open(L, ":memory:", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
 }
 
 static int lsqlite_newindex(lua_State *L) {
@@ -2156,6 +2161,17 @@ static const struct {
     SC(FUNCTION           )
     SC(SAVEPOINT          )
 
+    /* file open flags */
+    SC(OPEN_READONLY)
+    SC(OPEN_READWRITE)
+    SC(OPEN_CREATE)
+    SC(OPEN_URI)
+    SC(OPEN_MEMORY)
+    SC(OPEN_NOMUTEX)
+    SC(OPEN_FULLMUTEX)
+    SC(OPEN_SHAREDCACHE)
+    SC(OPEN_PRIVATECACHE)
+    
     /* terminator */
     { NULL, 0 }
 };

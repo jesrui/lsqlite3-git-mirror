@@ -202,6 +202,18 @@ specific database, see <a href="#database_methods">Database methods</a>). Exampl
         myDB:close()  -- close</pre>
 <p>In case of an error, the function returns nil, an error code and an
 error message.</p>
+<p>Since 0.9.4, there is a second optional flags argument to <code>sqlite3.open</code>.
+<pre>
+        sqlite3.open(filename, flags)</pre></p>
+<p>
+See <a href="https://www.sqlite.org/c3ref/open.html">sqlite3_open_v2</a> for an explanation of
+these flags and options.</p>
+<p>
+Example:
+<pre>
+        local db = sqlite3.open('foo.db', sqlite3.OPEN_READWRITE + sqlite3.OPEN_CREATE + sqlite3.OPEN_SHAREDCACHE)
+</pre>
+The default value for flags is <code>sqlite3.OPEN_READWRITE + sqlite3.OPEN_CREATE</code>.</p>
 <p>
 </p>
 <h2><a name="sqlite3_open_memory">sqlite3.open_memory</a></h2>
@@ -1084,6 +1096,12 @@ of <code>backup:finish()</code>.
   SELECT: 21              TRANSACTION: 22       UPDATE: 23            ATTACH: 24
   DETACH: 25              ALTER_TABLE: 26       REINDEX: 27           ANALYZE: 28
   CREATE_VTABLE: 29       DROP_VTABLE: 30       FUNCTION: 31          SAVEPOINT: 32
+</pre>
+<p>and the Open Flags:</p>
+<pre>
+  OPEN_READONLY           OPEN_READWRITE        OPEN_CREATE           OPEN_URI
+  OPEN_MEMORY             OPEN_NOMUTEX          OPEN_FULLMUTEX        OPEN_SHAREDCACHE
+  OPEN_PRIVATECACHE
 </pre>
 <p>For details about their exact meaning please see the <strong>SQLite3
 documentation</strong> <a href="http://www.sqlite.org/">http://www.sqlite.org/</a>.</p>
