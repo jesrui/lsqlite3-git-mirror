@@ -930,6 +930,19 @@ static int db_interrupt(lua_State *L) {
     return 0;
 }
 
+static int db_db_filename(lua_State *L) {
+    sdb *db = lsqlite_checkdb(L, 1);
+    const char *db_name = luaL_checkstring(L, 2);
+    const char *filename = sqlite3_db_filename(db->db, db_name);
+    if (NULL == filename) {
+        return 0;
+    }
+    else {
+        lua_pushstring(L, filename);
+        return 1;
+    }
+}
+
 /*
 ** Registering SQL functions:
 */
@@ -2188,6 +2201,7 @@ static const luaL_Reg dblib[] = {
     {"errmsg",              db_errmsg               },
     {"error_message",       db_errmsg               },
     {"interrupt",           db_interrupt            },
+    {"db_filename",         db_db_filename          },
 
     {"create_function",     db_create_function      },
     {"create_aggregate",    db_create_aggregate     },

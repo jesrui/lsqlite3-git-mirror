@@ -38,7 +38,8 @@
 		<li><a href="#db_errcode">db:errcode</a></li>
 		<li><a href="#db_errmsg">db:errmsg</a></li>
 		<li><a href="#db_exec">db:exec</a></li>
-		<li><a href="#db_interrupt">db:interrupt</a></li>
+        <li><a href="#db_interrupt">db:interrupt</a></li>
+        <li><a href="#db_db_filename">db:db_filename</a></li>
 		<li><a href="#db_isopen">db:isopen</a></li>
 		<li><a href="#db_last_insert_rowid">db:last_insert_rowid</a></li>
 		<li><a href="#db_load_extension">db:load_extension</a></li>
@@ -497,6 +498,17 @@ all subsequent SQL statements are skipped and <code>db:exec()</code> returns
         db:interrupt()</pre>
 <p>This function causes any pending database operation to abort and return
 at the next opportunity. This function returns nothing.</p>
+<p>
+</p>
+<h2><a name="db_db_filename">db:db_filename</a></h2>
+<pre>
+        db:db_filename(name)</pre>
+<p>This function returns the filename associated with database <code>name</code> of connection 
+<code>db</code>. The <code>name</code> may be "main" for the main database file, or 
+the name specified after the AS keyword in an ATTACH statement for an attached database. 
+If there is no attached database <code>name</code> on the database connection <code>db</code>, 
+then no value is returned; if database <code>name</code> is a temporary or in-memory database, 
+then an empty string is returned.</p>
 <p>
 </p>
 <h2><a name="db_isopen">db:isopen</a></h2>
