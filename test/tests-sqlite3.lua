@@ -1229,8 +1229,20 @@ function r094.test_db_filename()
   assert_nil( r094.db_fn:db_filename("frob") )
   assert_equal( r094.filename, r094.db_fn:db_filename("main") )
 
-end
+  -- from Wolfgang Oertl
+  local db_ptr = assert_userdata( r094.db:get_ptr() )
+  local db2    = assert_userdata( sqlite3.open_ptr(db_ptr) )
+  -- do something via connection 1
+  r094.db:exec("CREATE TABLE test1(a, b)")
+  r094.db:exec("INSERT INTO test1 VALUES(1, 2)")
+  -- see result via connection 2
+  for a, b in db2:urows("SELECT * FROM test1 ORDER BY a") do
+        assert_equal(a, 1)
+        assert_equal(b, 2)
+  end
+  assert_number( db2:close() )
 
+end
 
 lunit.main()
 

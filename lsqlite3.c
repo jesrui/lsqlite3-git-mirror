@@ -2018,6 +2018,17 @@ static int db_close_vm(lua_State *L) {
     return 0;
 }
 
+/* From: Wolfgang Oertl
+When using lsqlite3 in a multithreaded environment, each thread has a separate Lua 
+environment, but full userdata structures can't be passed from one thread to another.
+This is possible with lightuserdata, however. See: lsqlite_open_ptr().
+*/
+static int db_get_ptr(lua_State *L) {
+    sdb *db = lsqlite_checkdb(L, 1);
+    lua_pushlightuserdata(L, db->db);
+    return 1;
+}
+
 static int db_gc(lua_State *L) {
     sdb *db = lsqlite_getdb(L, 1);
     if (db->db != NULL)  /* ignore closed databases */
@@ -2091,6 +2102,30 @@ static int lsqlite_open(lua_State *L) {
 
 static int lsqlite_open_memory(lua_State *L) {
     return lsqlite_do_open(L, ":memory:", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+}
+
+/* From: Wolfgang Oertl
+When using lsqlite3 in a multithreaded environment, each thread has a separate Lua 
+environment, but full userdata structures can't be passed from one thread to another.
+This is possible with lightuserdata, however. See: db_get_ptr().
+*/
+static int lsqlite_open_ptr(lua_State *L) {
+    sqlite3 *db_ptr;
+    sdb *db;
+    int rc;
+
+    luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+    db_ptr = lua_touserdata(L, 1);
+    /* This is the only API function that runs sqlite3SafetyCheck regardless of
+     * SQLITE_ENABLE_API_ARMOR and does almost nothing (without an SQL
+     * statement) */
+    rc = sqlite3_exec(db_ptr, NULL, NULL, NULL, NULL);
+    if (rc != SQLITE_OK)
+        luaL_argerror(L, 1, "not a valid SQLite3 pointer");
+
+    db = newdb(L); /* create and leave in stack */
+    db->db = db_ptr;
+    return 1;
 }
 
 static int lsqlite_newindex(lua_State *L) {
@@ -2227,6 +2262,7 @@ static const luaL_Reg dblib[] = {
     {"execute",             db_exec                 },
     {"close",               db_close                },
     {"close_vm",            db_close_vm             },
+    {"get_ptr",             db_get_ptr              },
 
     {"__tostring",          db_tostring             },
     {"__gc",                db_gc                   },
@@ -2323,6 +2359,7 @@ static const luaL_Reg sqlitelib[] = {
 #endif
     {"open",            lsqlite_open            },
     {"open_memory",     lsqlite_open_memory     },
+    {"open_ptr",        lsqlite_open_ptr        },
 
     {"backup_init",     lsqlite_backup_init     },
 

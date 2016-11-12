@@ -18,6 +18,7 @@
         <li><a href="#sqlite3_lversion">sqlite3.lversion</a></li>
 		<li><a href="#sqlite3_open">sqlite3.open</a></li>
         <li><a href="#sqlite3_open_memory">sqlite3.open_memory</a></li>
+        <li><a href="#sqlite3_open_ptr">sqlite3.open_ptr</a></li>
         <li><a href="#sqlite3_backup_init">sqlite3.backup_init</a></li>
 		<li><a href="#sqlite3_temp_directory">sqlite3.temp_directory</a></li>
 		<li><a href="#sqlite3_version">sqlite3.version</a></li>
@@ -31,6 +32,7 @@
 		<li><a href="#db_changes">db:changes</a></li>
 		<li><a href="#db_close">db:close</a></li>
 		<li><a href="#db_close_vm">db:close_vm</a></li>
+        <li><a href="#db_get_ptr">db:get_ptr</a></li>
         <li><a href="#db_commit_hook">db:commit_hook</a></li>
 		<li><a href="#db_create_aggregate">db:create_aggregate</a></li>
 		<li><a href="#db_create_collation">db:create_collation</a></li>
@@ -226,7 +228,14 @@ and an error message. (In-memory databases are volatile as they are
 never stored on disk.)</p>
 <p>
 </p>
-
+<h2><a name="sqlite3_open_ptr">sqlite3.open_ptr</a></h2>
+<pre>
+        sqlite3.open_ptr(db_ptr)</pre>
+<p>Opens the SQLite database corresponding to the light userdata <code>db_ptr</code> and returns 
+its handle as userdata. Use <a href="#db_get_ptr"><code>db:get_ptr</code></a> to get 
+a <code>db_ptr</code> for an open database.</p>
+<p>
+</p>
 <h2><a name="sqlite3_backup_init">sqlite3.backup_init</a></h2>
 <pre>
         sqlite3.backup_init(target_db, target_name, source_db, source_name)</pre>
@@ -324,6 +333,16 @@ have been finalized before this function is called. The function returns
 <p>Finalizes all statements that have not been explicitly finalized. If
 <code>temponly</code> is true, only internal, temporary statements are finalized.
 This function returns nothing.</p>
+<p>
+</p>
+<h2><a name="db_get_ptr">db:get_ptr</a></h2>
+<pre>
+        db:get_ptr()</pre>
+<p>Returns a lightuserdata corresponding to the open <code>db</code>. Use with 
+<a href="#sqlite3_open_ptr"><code>sqlite3.open_ptr</code></a> to pass a database connection
+between threads. (When using lsqlite3 in a multithreaded environment, each thread has a separate 
+Lua environment; full userdata structures can't be passed from one thread to another, but this 
+is possible with lightuserdata.)</p>
 <p>
 </p>
 <h2><a name="db_commit_hook">db:commit_hook</a></h2>

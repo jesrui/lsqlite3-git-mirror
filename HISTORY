@@ -4,9 +4,10 @@ Version "0.9.4"
 
 Since the "0.9.3-devel" release of this Lua library...
 
-Add function db:db_filename(name)
-
+Add functions db:get_ptr() and sqlite3.open_ptr(db_ptr) to pass a db connection between threads.
+Add function db:db_filename(name).
 Update sqlite3_open to sqlite3_open_v2 and add open flags constants.
+Thanks to Wolfgang Oertl!
 
 Added second module 'lsqlite3complete' that statically links sqlite.c. Continue to use 
 'lsqlite3' for dynamic linking to 'sqlite3.so' or 'sqlite3.dll'.
