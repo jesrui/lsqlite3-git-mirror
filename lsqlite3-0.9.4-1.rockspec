@@ -1,5 +1,5 @@
 package = "lsqlite3"
-version = "0.9.4-0"
+version = "0.9.4-1"
 source = {
     url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09x.zip?uuid=fsl_9x",
     file = "lsqlite3_fsl09x.zip"
@@ -36,6 +36,7 @@ build = {
         },
         lsqlite3complete = {
             sources = { "lsqlite3.c", "sqlite3.c" },
+            libraries = { "pthread", "m", "dl" },
             defines = {'LSQLITE_VERSION="0.9.4"', 'luaopen_lsqlite3=luaopen_lsqlite3complete'}
         }
     },

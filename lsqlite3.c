@@ -933,14 +933,9 @@ static int db_interrupt(lua_State *L) {
 static int db_db_filename(lua_State *L) {
     sdb *db = lsqlite_checkdb(L, 1);
     const char *db_name = luaL_checkstring(L, 2);
-    const char *filename = sqlite3_db_filename(db->db, db_name);
-    if (NULL == filename) {
-        return 0;
-    }
-    else {
-        lua_pushstring(L, filename);
-        return 1;
-    }
+    // sqlite3_db_filename may return NULL, in that case Lua pushes nil...
+    lua_pushstring(L, sqlite3_db_filename(db->db, db_name));
+    return 1;
 }
 
 /*
