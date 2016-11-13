@@ -1,5 +1,5 @@
-package = "lsqlite3"
-version = "0.9.4-1"
+package = "lsqlite3complete"
+version = "0.9.4-2"
 source = {
     url = "http://lua.sqlite.org/index.cgi/zip/lsqlite3_fsl09x.zip?uuid=fsl_9x",
     file = "lsqlite3_fsl09x.zip"
@@ -13,32 +13,28 @@ description = {
         However, most sqlite3 functions are called via an object-oriented interface to 
         either database or SQL statement objects.
     ]],
-    license = "MIT/X11",
+    license = "MIT",
     homepage = "http://lua.sqlite.org/"
 }
 dependencies = {
     "lua >= 5.1, < 5.4"
 }
-external_dependencies = {
-    SQLITE = {
-        header = "sqlite3.h"
-    }
-}
 build = {
     type = "builtin",
     modules = {
-        lsqlite3 = {
-            sources = { "lsqlite3.c" },
-            defines = {'LSQLITE_VERSION="0.9.4"'},
-            libraries = { "sqlite3" },
-            incdirs = { "$(SQLITE_INCDIR)" },
-            libdirs = { "$(SQLITE_LIBDIR)" }
-        },
         lsqlite3complete = {
             sources = { "lsqlite3.c", "sqlite3.c" },
-            libraries = { "pthread", "m", "dl" },
             defines = {'LSQLITE_VERSION="0.9.4"', 'luaopen_lsqlite3=luaopen_lsqlite3complete'}
+        },
+    },
+    platforms = {
+        unix = {
+            modules = {
+                lsqlite3complete = {
+                    libraries = { "pthread", "m", "dl" }
+                }
+            }
         }
     },
-	copy_directories = { 'doc', 'examples' }
+    copy_directories = { 'doc', 'examples' }
 }
