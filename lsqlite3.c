@@ -2048,7 +2048,7 @@ static int lsqlite_complete(lua_State *L) {
     return 1;
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 static int lsqlite_temp_directory(lua_State *L) {
     const char *oldtemp = sqlite3_temp_directory;
 
@@ -2349,7 +2349,7 @@ static const luaL_Reg sqlitelib[] = {
     {"lversion",        lsqlite_lversion        },
     {"version",         lsqlite_version         },
     {"complete",        lsqlite_complete        },
-#ifndef WIN32
+#ifndef _WIN32
     {"temp_directory",  lsqlite_temp_directory  },
 #endif
     {"open",            lsqlite_open            },
