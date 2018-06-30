@@ -26,8 +26,8 @@
 
 --]]--------------------------------------------------------------------------
 
--- extended for LuaSQLite3, and for Lua 5.2 (using lunitx)
--- Copyright (c) 2005-13 Doug Currie
+-- extended for LuaSQLite3, and for Lua 5.2 through 5.4 (using lunitx)
+-- Copyright (c) 2005-18 Doug Currie
 -- Same license as above
 
 local sqlite3 = require(arg[1]) -- "lsqlite3complete" or "lsqlite3"
@@ -1243,6 +1243,57 @@ function r094.test_db_filename()
   assert_number( db2:close() )
 
 end
+
+--------------------------------------
+-- Test for defect ticket d54dc056  --
+--------------------------------------
+
+local db_lgblob = lunit_TestCase("Large Blob")
+
+function db_lgblob.setup()
+  db_lgblob.filename = "/tmp/__lua-sqlite3-20180630t." .. os.time()
+  db_lgblob.db = assert_userdata( sqlite3.open(db_lgblob.filename) )
+  assert_equal( sqlite3.OK,
+   db_lgblob.db:exec("CREATE TABLE IF NOT EXISTS test ( "..
+                     "filename TEXT PRIMARY KEY, ISOtime TEXT, wav BLOB )") )
+end
+
+function db_lgblob.teardown()
+  assert( db_lgblob.db:close() )
+  os.remove(db_lgblob.filename)
+end
+
+function db_lgblob.test()
+    local db = db_lgblob.db
+    local lb = string.rep('Hello\0SQLite\0', 1000000) -- 13Mbytes
+
+    local stat = db:prepare(
+            "INSERT OR REPLACE INTO test (filename, ISOtime, wav) VALUES (?,?,?)")
+    stat:bind(1, 'fn')
+    stat:bind(2, '2018-06-30')
+    stat:bind_blob(3, lb)
+    rc = stat:step()
+    assert_equal( sqlite3.DONE, rc )
+    if rc == sqlite3.DONE then
+      stat:finalize()
+      db:close()
+    end
+
+    db_lgblob.db = assert_userdata( sqlite3.open(db_lgblob.filename) )
+    db = db_lgblob.db
+
+    stat = db:prepare("SELECT wav FROM test WHERE filename = ?")
+    stat:bind(1,'fn')
+    stat:step()
+    local body = stat:get_value(0)
+
+    assert_equal( lb, body )
+    assert( string.len(lb) == (13 * 1000000) )
+end
+
+-------------------------
+-- Run the unit tests  --
+-------------------------
 
 lunit.main()
 
