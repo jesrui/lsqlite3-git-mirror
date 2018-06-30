@@ -1,3 +1,11 @@
+2018-June-30
+
+Version "0.9.5"
+
+Since the "0.9.4-devel" release of this Lua library...
+
+Lua 5.4 compatibility (backward compatible with Lua 5.3, 5.2, and Lua 5.1.5).
+
 2016-November-13
 
 Version "0.9.4"
