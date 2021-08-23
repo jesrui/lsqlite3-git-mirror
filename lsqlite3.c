@@ -243,6 +243,7 @@ static int cleanupvm(lua_State *L, sdb_vm *svm) {
 }
 
 static int stepvm(lua_State *L, sdb_vm *svm) {
+	(void)L;
     return sqlite3_step(svm->vm);
 }
 
@@ -935,7 +936,7 @@ static int db_interrupt(lua_State *L) {
 static int db_db_filename(lua_State *L) {
     sdb *db = lsqlite_checkdb(L, 1);
     const char *db_name = luaL_checkstring(L, 2);
-    // sqlite3_db_filename may return NULL, in that case Lua pushes nil...
+    /* sqlite3_db_filename may return NULL, in that case Lua pushes nil... */
     lua_pushstring(L, sqlite3_db_filename(db->db, db_name));
     return 1;
 }
@@ -1317,7 +1318,6 @@ static void db_update_hook_callback(void *user, int op, char const *dbname, char
     sdb *db = (sdb*)user;
     lua_State *L = db->L;
     int top = lua_gettop(L);
-    lua_Number n;
 
     /* setup lua callback call */
     lua_rawgeti(L, LUA_REGISTRYINDEX, db->update_hook_cb);    /* get callback */
@@ -2342,7 +2342,7 @@ static const luaL_Reg dbbulib[] = {
     {"pagecount",   dbbu_pagecount  },
     {"finish",      dbbu_finish     },
 
-//  {"__tostring",  dbbu_tostring   },
+/*  {"__tostring",  dbbu_tostring   },   */
     {"__gc",        dbbu_gc         },
     {NULL, NULL}
 };
