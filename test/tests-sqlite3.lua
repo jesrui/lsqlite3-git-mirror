@@ -482,7 +482,7 @@ function b.teardown()
   assert_number( b.db:close() )
 end
 
-function b.test_auto_parameter_names()
+function b.test_auto_parameter_names_colon()
   local stmt = assert_userdata( b.db:prepare("INSERT INTO test VALUES(:a, $b, :a2, :b2, $a, :b, $a3, $b3)") )
   local parameters = assert_number( stmt:bind_parameter_count() )
   assert_equal( 8, parameters )
@@ -496,7 +496,7 @@ function b.test_auto_parameter_names()
   assert_equal( "$b3", stmt:bind_parameter_name(8) )
 end
 
-function b.test_auto_parameter_names()
+function b.test_auto_parameter_names_dollar()
   local stmt = assert_userdata( b.db:prepare("INSERT INTO test VALUES($a, $b, $a2, $b2, $a, $b, $a3, $b3)") )
   local parameters = assert_number( stmt:bind_parameter_count() )
   assert_equal( 6, parameters )
