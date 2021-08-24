@@ -2,9 +2,9 @@
 
 LIBNAME= lsqlite3
 
-LUAEXE= lua
+LUAEXE= ./lua
 
-ROCKSPEC= $(shell find . -name $(LIBNAME)-*-*.rockspec)
+ROCKSPEC= $(shell find . -name $(LIBNAME)-*-*.rockspec ! -path './lua_modules/*')
 
 all: install
 

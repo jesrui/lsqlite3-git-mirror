@@ -238,6 +238,115 @@ function basics.test_update()
 end
 
 
+
+---------------------
+-- Iterator styles --
+---------------------
+
+local iterating = lunit_TestCase("Iterator")
+
+function iterating.setup()
+  iterating.db = assert_userdata( sqlite3.open_memory() )
+  assert_equal( sqlite3.OK, iterating.db:exec("CREATE TABLE test (id, name)") )
+  assert_equal( sqlite3.OK, iterating.db:exec("INSERT INTO test VALUES (1, 'Hello World')") )
+  assert_equal( sqlite3.OK, iterating.db:exec("INSERT INTO test VALUES (2, 'Hello Lua')") )
+  assert_equal( sqlite3.OK, iterating.db:exec("INSERT INTO test VALUES (3, 'Hello sqlite3')") )
+end
+
+function iterating.teardown()
+  assert_equal( sqlite3.OK, iterating.db:close() )
+end
+
+function iterating.test_rows()
+  local expected = {
+    "Hello World",
+    "Hello Lua",
+    "Hello sqlite3",
+  }
+  for row in iterating.db:rows("SELECT * FROM test ORDER BY id") do
+    assert( row[1] > 0 and row[1] <= 3, "Index out of range" )
+    assert_equal( expected[row[1]], row[2])
+  end
+
+  for row in iterating.db:nrows("SELECT * FROM test ORDER BY id") do
+    assert( row.id > 0 and row.id <= 3, "Index out of range" )
+    assert_equal( expected[row.id], row.name)
+  end
+
+  for id, name in iterating.db:urows("SELECT * FROM test ORDER BY id") do
+    assert( id > 0 and id <= 3, "Index out of range" )
+    assert_equal( expected[id], name)
+  end
+end
+
+function iterating.test_arg_rows()
+  local expected = {
+    "Hello World",
+    "Hello Lua",
+    "Hello sqlite3",
+  }
+  for row in iterating.db:rows("SELECT * FROM test WHERE id >= ? ORDER BY id", 2) do
+    assert( row[1] > 1 and row[1] <= 3, "Index out of range" )
+    assert_equal( expected[row[1]], row[2])
+  end
+
+  for row in iterating.db:nrows("SELECT * FROM test WHERE id >= ? ORDER BY id", 2) do
+    assert( row.id > 1 and row.id <= 3, "Index out of range" )
+    assert_equal( expected[row.id], row.name)
+  end
+
+  for id, name in iterating.db:urows("SELECT * FROM test WHERE id >= ? ORDER BY id", 2) do
+    assert( id > 1 and id <= 3, "Index out of range" )
+    assert_equal( expected[id], name)
+  end
+end
+
+function iterating.test_narg_rows()
+  local expected = {
+    "Hello World",
+    "Hello Lua",
+    "Hello sqlite3",
+  }
+  for row in iterating.db:rows("SELECT * FROM test WHERE id >= ? ORDER BY id", { 2 }) do
+    assert( row[1] > 1 and row[1] <= 3, "Index out of range" )
+    assert_equal( expected[row[1]], row[2])
+  end
+
+  for row in iterating.db:nrows("SELECT * FROM test WHERE id >= ? ORDER BY id", { 2 }) do
+    assert( row.id > 1 and row.id <= 3, "Index out of range" )
+    assert_equal( expected[row.id], row.name)
+  end
+
+  for id, name in iterating.db:urows("SELECT * FROM test WHERE id >= ? ORDER BY id", { 2 }) do
+    assert( id > 1 and id <= 3, "Index out of range" )
+    assert_equal( expected[id], name)
+  end
+end
+
+function iterating.test_namedarg_rows()
+  local expected = {
+    "Hello World",
+    "Hello Lua",
+    "Hello sqlite3",
+  }
+  for row in iterating.db:rows("SELECT * FROM test WHERE id >= :low ORDER BY id", { low = 2 }) do
+    assert( row[1] > 1 and row[1] <= 3, "Index out of range" )
+    assert_equal( expected[row[1]], row[2])
+  end
+
+  for row in iterating.db:nrows("SELECT * FROM test WHERE id >= :low ORDER BY id", { low = 2 }) do
+    assert( row.id > 1 and row.id <= 3, "Index out of range" )
+    assert_equal( expected[row.id], row.name)
+  end
+
+  for id, name in iterating.db:urows("SELECT * FROM test WHERE id >= :low ORDER BY id", { low = 2 }) do
+    assert( id > 1 and id <= 3, "Index out of range" )
+    assert_equal( expected[id], name)
+  end
+end
+
+
+
 ---------------------------------
 -- Statement Column Info Tests --
 ---------------------------------
