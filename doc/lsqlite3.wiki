@@ -142,8 +142,9 @@ You can get it from <a href="http://www.sqlite.org/">http://www.sqlite.org/</a>
 The SQLite3 amalgamation source code is included in 
 the LuaSQLite 3 distribution.  This can simplify deployment, but might
 result in more than one copy of the SQLite library if other parts
-of the code also include it.  Data loss can occur if different versions of
-SQLite are used in the same process at the same time.</p>
+of the code also include it.  See
+<a href="http://www.sqlite.org/howtocorrupt.html#multiple_copies_of_sqlite_linked_into_the_same_application">http://www.sqlite.org/howtocorrupt.html</a>
+for an explanation on why it would be a bad idea.</p>
 <p>Both modules support the creation and manipulation of 
 SQLite3 databases. After a <code>sqlite3 = require('lsqlite3')</code> 
 (or <code>sqlite3 = require('lsqlite3complete')</code>) the exported 
